@@ -1,4 +1,5 @@
-"""The web app: one page, a help page, one preview partial, one PDF endpoint.
+"""The web app: one page, a help page, one preview partial, one PDF endpoint,
+and the few files crawlers and browsers ask for on their own.
 
 Nothing is stored. The browser keeps the file in its file input and sends it
 again with every preview and every download, so the server holds an image
@@ -10,11 +11,12 @@ from io import BytesIO
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+from . import seo
 from .layout import MM_PER_UNIT, PAPERS, DoesNotFit, Layout, LayoutError, plan, to_mm
 from .pdf import write_pdf
 from .preview import render_preview
@@ -22,9 +24,11 @@ from .preview import render_preview
 MAX_UPLOAD = 25 * 1024 * 1024
 
 HERE = Path(__file__).parent
-app = FastAPI(title="Exactly Print")
+# No API docs: the form endpoints are not an API, and crawlers would index the pages.
+app = FastAPI(title=seo.NAME, description=seo.TAGLINE, openapi_url=None)
 app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 templates = Jinja2Templates(directory=HERE / "templates")
+templates.env.globals["seo"] = seo
 
 Image.MAX_IMAGE_PIXELS = 80_000_000
 
@@ -107,7 +111,14 @@ def fmt_size(mm: float, unit: str) -> str:
 
 
 def index_page(request: Request, error: str | None = None):
-    context = {"papers": list(PAPERS), "units": list(MM_PER_UNIT), "error": error}
+    page = seo.index_page(request)
+    context = {
+        "papers": list(PAPERS),
+        "units": list(MM_PER_UNIT),
+        "error": error,
+        "page": page,
+        "structured_data": seo.index_graph(page),
+    }
     return templates.TemplateResponse(request, "index.html", context)
 
 
@@ -118,7 +129,25 @@ async def index(request: Request):
 
 @app.get("/help", response_class=HTMLResponse)
 async def help_page(request: Request):
-    return templates.TemplateResponse(request, "help.html", {})
+    page = seo.help_page(request)
+    context = {"page": page, "structured_data": seo.help_graph(page)}
+    return templates.TemplateResponse(request, "help.html", context)
+
+
+@app.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
+async def robots(request: Request):
+    return seo.robots_txt(seo.site_url(request))
+
+
+@app.get("/sitemap.xml", include_in_schema=False)
+async def sitemap(request: Request):
+    return Response(seo.sitemap_xml(seo.site_url(request)), media_type="application/xml")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    # Browsers and crawlers ask for it at the root without reading the page.
+    return FileResponse(HERE / "static" / "favicon.ico", media_type="image/x-icon")
 
 
 @app.post("/preview", response_class=HTMLResponse)

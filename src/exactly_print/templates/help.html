@@ -1,9 +1,9 @@
 {% extends "_base.html" %}
-{% block title %}Help · Exactly Print{% endblock %}
 {% block tagline %}How to get a print that measures what you asked for.{% endblock %}
 {% block nav %}<a href="/">Back to printing</a>{% endblock %}
 {% block content %}
-    <section id="help" class="help">
+    <main class="single">
+    <article id="help" class="help">
       <h2 id="help-why">Why a print comes out the wrong size</h2>
       <p>
         The PDF says exactly how large everything is: a 120 mm wide image is 120 mm wide in the
@@ -78,5 +78,6 @@
         The server only ever receives the chosen factor and name along with each preview and
         PDF, and keeps nothing. Clearing the site's data in the browser removes the printers.
       </p>
-    </section>
+    </article>
+    </main>
 {% endblock %}
