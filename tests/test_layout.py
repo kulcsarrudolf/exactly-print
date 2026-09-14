@@ -1,6 +1,15 @@
 import pytest
 
-from exactly_print.layout import BLEED, DoesNotFit, LayoutError, plan, target_size, to_mm
+from exactly_print.layout import (
+    BLEED,
+    MARGIN,
+    SIDE_BAND,
+    DoesNotFit,
+    LayoutError,
+    plan,
+    target_size,
+    to_mm,
+)
 
 
 def test_missing_side_follows_aspect_ratio():
@@ -34,7 +43,8 @@ def test_invitation_on_a4():
     layout = plan((1488, 2078), 120, 170, "A4")
     assert (layout.page_w, layout.page_h) == (210, 297)
     assert (layout.trim.w, layout.trim.h) == (120, 170)
-    assert layout.trim.x == pytest.approx(45)
+    # Centred between the side band and the margin, not on the sheet.
+    assert layout.trim.x == pytest.approx(52)
     assert layout.bleed.w == 120 + 2 * BLEED
     # The image covers the bleed box: as tall as it, wider, centred.
     assert layout.image.h == pytest.approx(174)
@@ -49,11 +59,11 @@ def test_too_large_is_refused_with_the_limit():
         plan((100, 100), 200, 200, "A4")
     assert str(info.value) == (
         "200 × 200 mm does not fit on A4 (210 × 297 mm). "
-        "The largest that fits with the ruler and the bleed is 194 × 261 mm."
+        "The largest that fits with the rulers and the bleed is 180 × 261 mm."
     )
     assert info.value.message("cm") == (
         "20 × 20 cm does not fit on A4 (21 × 29.7 cm). "
-        "The largest that fits with the ruler and the bleed is 19.4 × 26.1 cm."
+        "The largest that fits with the rulers and the bleed is 18 × 26.1 cm."
     )
 
 
@@ -86,46 +96,59 @@ def test_soft_flag():
     assert not plan((3000, 3000), 100, None).soft
 
 
+def test_the_two_rulers_share_a_corner():
+    layout = plan((1488, 2078), 120, 170, "A4")
+    assert layout.ruler_y == 17
+    assert layout.side_ruler_x == 7
+    assert layout.ruler_len == layout.side_ruler_len == 100
+    # The left ruler's ticks stay left of the image's crop marks.
+    assert layout.bleed.x - 8 > layout.side_ruler_x + 5
+
+
 def test_calibration_draws_the_page_larger_but_reports_the_print():
     plain = plan((1488, 2078), 120, 170, "A4")
-    layout = plan((1488, 2078), 120, 170, "A4", scale=1.02)
-    # The sheet is still the real A4; the drawing on it is 2 % larger.
+    layout = plan((1488, 2078), 120, 170, "A4", scale_x=1.02, scale_y=1.01)
+    # The sheet is still the real A4; the drawing on it is larger, each way
+    # by its own factor.
     assert (layout.page_w, layout.page_h) == (210, 297)
     assert layout.trim.w == pytest.approx(120 * 1.02)
-    assert layout.trim.h == pytest.approx(170 * 1.02)
+    assert layout.trim.h == pytest.approx(170 * 1.01)
     assert layout.ruler_len == pytest.approx(102)
-    # Scaled about the centre of the page, so the trim stays centred.
-    assert layout.trim.x + layout.trim.w / 2 == pytest.approx(105)
+    assert layout.side_ruler_len == pytest.approx(101)
+    assert layout.side_ruler_x == pytest.approx(7 * 1.02)
+    assert layout.ruler_y == pytest.approx(17 * 1.01)
+    # Still centred between the side band and the margin, both drawn scaled.
+    centre = (SIDE_BAND * 1.02 + 210 - MARGIN * 1.02) / 2
+    assert layout.trim.x + layout.trim.w / 2 == pytest.approx(centre)
     # The resolution is that of the print, which is what the eye sees.
     assert layout.dpi == pytest.approx(plain.dpi)
     assert layout.marks[0][2] - layout.marks[0][0] == pytest.approx(-7 * 1.02)
+    assert layout.marks[1][3] - layout.marks[1][1] == pytest.approx(-7 * 1.01)
 
 
 def test_calibration_leaves_less_room_on_the_sheet():
-    plan((100, 100), 194, 100, "A4", "portrait")
+    plan((100, 100), 180, 100, "A4", "portrait")
     with pytest.raises(DoesNotFit) as info:
-        plan((100, 100), 194, 100, "A4", "portrait", scale=1.05)
+        plan((100, 100), 180, 100, "A4", "portrait", scale_x=1.05, scale_y=1.05)
     assert "does not fit on A4 (210 × 297 mm)" in str(info.value)
-    assert "184 × 246.9 mm" in str(info.value)
+    assert "170 × 246.9 mm" in str(info.value)
 
 
 def test_calibration_out_of_range_is_a_setting_not_a_printer():
     with pytest.raises(LayoutError) as info:
-        plan((100, 100), 50, None, scale=1.5)
-    assert "the ruler measured 67 mm" in str(info.value)
+        plan((100, 100), 50, None, scale_x=1.5)
+    assert "×1.500 across means the ruler measured 67 mm" in str(info.value)
     assert "print setting" in str(info.value)
-    with pytest.raises(LayoutError):
-        plan((100, 100), 50, None, scale=0.7)
+    with pytest.raises(LayoutError) as info:
+        plan((100, 100), 50, None, scale_y=0.7)
+    assert "×0.700 down" in str(info.value)
 
 
 def test_describe_names_the_printer_in_real_millimetres():
-    layout = plan((1488, 2078), 120, 170, "A4", scale=100 / 98)
+    layout = plan((1488, 2078), 120, 170, "A4", scale_x=100 / 98, scale_y=100 / 99)
     text = layout.describe("mm", "HP LaserJet")
     assert text.startswith("Image 120 × 170 mm  ·  Paper A4 portrait, 210 × 297 mm")
-    assert text.endswith("Calibrated for HP LaserJet, drawn at ×1.020")
+    assert text.endswith("Calibrated for HP LaserJet, drawn at ×1.020 across, ×1.010 down")
     assert plan((1488, 2078), 120, 170, "A4").describe("mm", "").endswith("dpi")
-    assert (
-        plan((1488, 2078), 120, 170, "A4", scale=0.99)
-        .describe()
-        .endswith("Calibrated, drawn at ×0.990")
-    )
+    same = plan((1488, 2078), 120, 170, "A4", scale_x=0.99, scale_y=0.99)
+    assert same.describe().endswith("Calibrated, drawn at ×0.990")

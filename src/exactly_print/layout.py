@@ -24,10 +24,15 @@ BLEED = 2.0
 MARGIN = 6.0
 # The strip along the bottom edge kept for the ruler and the notes.
 RULER_BAND = 26.0
+# The strip along the left edge kept for the vertical ruler: its numbers
+# and the crop marks of the image must not run into each other.
+SIDE_BAND = 20.0
 RULER_LEN = 100.0
-# The ruler's baseline; the settings and the notes hang below it, the
-# numbers sit above.
+# The bottom ruler's baseline; the settings and the notes hang below it,
+# the numbers sit above. The left ruler starts on the same line.
 RULER_Y = 17.0
+# The left ruler's line; its ticks and numbers sit to the right of it.
+RULER_X = 7.0
 # Crop marks start this far outside the trim corner and run this long.
 MARK_GAP = 3.0
 MARK_LEN = 7.0
@@ -64,7 +69,7 @@ class DoesNotFit(LayoutError):
         return (
             f"{s(self.trim_w)} × {s(self.trim_h)} {unit} does not fit on {self.paper} "
             f"({s(self.page_w)} × {s(self.page_h)} {unit}). The largest that fits with "
-            f"the ruler and the bleed is {s(self.max_w)} × {s(self.max_h)} {unit}."
+            f"the rulers and the bleed is {s(self.max_w)} × {s(self.max_h)} {unit}."
         )
 
     def __str__(self) -> str:
@@ -86,15 +91,16 @@ class Box:
     def top(self) -> float:
         return self.y + self.h
 
-    def scaled(self, k: float) -> "Box":
-        return Box(self.x * k, self.y * k, self.w * k, self.h * k)
+    def scaled(self, kx: float, ky: float) -> "Box":
+        return Box(self.x * kx, self.y * ky, self.w * kx, self.h * ky)
 
 
 @dataclass(frozen=True)
 class Layout:
     """Everything is in millimetres on the page as drawn. With a calibrated
-    printer the drawing is `scale` times its real size, so the printer's own
-    scaling brings it back; `dpi` and `describe` still speak of the print."""
+    printer the drawing is `scale_x` times its real width and `scale_y` times
+    its real height, so the printer's own scaling brings it back; `dpi` and
+    `describe` still speak of the print."""
 
     paper: str
     page_w: float
@@ -104,26 +110,49 @@ class Layout:
     # Where the whole image is drawn. It covers the bleed box, and whatever
     # sticks out of the bleed box is clipped away.
     image: Box
+    # The bottom ruler starts here and runs right; the left ruler starts at
+    # (side_ruler_x, ruler_y) and runs up.
     ruler_x: float
     ruler_y: float
+    side_ruler_x: float
     dpi: float
-    scale: float = 1.0
+    scale_x: float = 1.0
+    scale_y: float = 1.0
 
     @property
     def ruler_len(self) -> float:
-        """The ruler as drawn; it comes off the printer as RULER_LEN."""
-        return RULER_LEN * self.scale
+        """The bottom ruler as drawn; it comes off the printer as RULER_LEN."""
+        return RULER_LEN * self.scale_x
+
+    @property
+    def side_ruler_len(self) -> float:
+        """The left ruler as drawn; it comes off the printer as RULER_LEN."""
+        return RULER_LEN * self.scale_y
 
     @property
     def marks(self) -> list[tuple[float, float, float, float]]:
         """Two short lines at each trim corner, kept clear of the bleed."""
-        gap, end = MARK_GAP * self.scale, (MARK_GAP + MARK_LEN) * self.scale
+        kx, ky = self.scale_x, self.scale_y
         lines = []
         for cx, sx in ((self.trim.x, -1), (self.trim.right, 1)):
             for cy, sy in ((self.trim.y, -1), (self.trim.top, 1)):
-                lines.append((cx + sx * gap, cy, cx + sx * end, cy))
-                lines.append((cx, cy + sy * gap, cx, cy + sy * end))
+                lines.append(
+                    (cx + sx * MARK_GAP * kx, cy, cx + sx * (MARK_GAP + MARK_LEN) * kx, cy)
+                )
+                lines.append(
+                    (cx, cy + sy * MARK_GAP * ky, cx, cy + sy * (MARK_GAP + MARK_LEN) * ky)
+                )
         return lines
+
+    @property
+    def calibrated(self) -> bool:
+        return self.scale_x != 1 or self.scale_y != 1
+
+    def drawn_at(self) -> str:
+        """The correction as text: one factor when both directions agree."""
+        if self.scale_x == self.scale_y:
+            return f"×{self.scale_x:.3f}"
+        return f"×{self.scale_x:.3f} across, ×{self.scale_y:.3f} down"
 
     @property
     def soft(self) -> bool:
@@ -136,19 +165,18 @@ class Layout:
     def describe(self, unit: str = "mm", printer: str = "") -> str:
         """The settings in one line, printed under the ruler so a sheet
         found in a drawer still says what it was made for."""
-        k = self.scale
 
         def s(mm: float) -> str:
-            return f"{mm / k / MM_PER_UNIT[unit]:.1f}".rstrip("0").rstrip(".")
+            return f"{mm / MM_PER_UNIT[unit]:.1f}".rstrip("0").rstrip(".")
 
         text = (
-            f"Image {s(self.trim.w)} × {s(self.trim.h)} {unit}  ·  "
-            f"Paper {self.paper} {self.orientation}, {s(self.page_w * k)} × {s(self.page_h * k)} "
-            f"{unit}  ·  Bleed {BLEED:g} mm  ·  {self.dpi:.0f} dpi"
+            f"Image {s(self.trim.w / self.scale_x)} × {s(self.trim.h / self.scale_y)} {unit}  ·  "
+            f"Paper {self.paper} {self.orientation}, {s(self.page_w)} × {s(self.page_h)} {unit}"
+            f"  ·  Bleed {BLEED:g} mm  ·  {self.dpi:.0f} dpi"
         )
-        if printer or k != 1:
+        if printer or self.calibrated:
             who = f" for {printer}" if printer else ""
-            text += f"  ·  Calibrated{who}, drawn at ×{k:.3f}"
+            text += f"  ·  Calibrated{who}, drawn at {self.drawn_at()}"
         return text
 
 
@@ -175,7 +203,7 @@ def target_size(
 
 
 def _page(
-    paper: str, orientation: str, trim_w: float, trim_h: float, scale: float = 1.0
+    paper: str, orientation: str, trim_w: float, trim_h: float, kx: float = 1.0, ky: float = 1.0
 ) -> tuple[float, float]:
     if paper not in PAPERS:
         raise LayoutError(f"Unknown paper size: {paper}")
@@ -188,8 +216,8 @@ def _page(
         raise LayoutError(f"Unknown orientation: {orientation}")
     # Auto: portrait, the way paper sits in the tray, unless only landscape
     # fits. The print is cut out anyway, so its own orientation does not matter.
-    if _fits(short / scale, long / scale, trim_w, trim_h) or not _fits(
-        long / scale, short / scale, trim_w, trim_h
+    if _fits(short / kx, long / ky, trim_w, trim_h) or not _fits(
+        long / kx, short / ky, trim_w, trim_h
     ):
         return short, long
     return long, short
@@ -197,9 +225,18 @@ def _page(
 
 def _fits(page_w: float, page_h: float, trim_w: float, trim_h: float) -> bool:
     return (
-        trim_w + 2 * BLEED <= page_w - 2 * MARGIN
+        trim_w + 2 * BLEED <= page_w - SIDE_BAND - MARGIN
         and trim_h + 2 * BLEED <= page_h - MARGIN - RULER_BAND
     )
+
+
+def _check_scale(scale: float, direction: str) -> None:
+    if not MIN_SCALE <= scale <= MAX_SCALE:
+        raise LayoutError(
+            f"A calibration of ×{scale:.3f} {direction} means the ruler measured "
+            f"{100 / scale:.0f} mm. That far off is a print setting, not the printer: "
+            f'print at 100% / "Actual size" and calibrate again.'
+        )
 
 
 def plan(
@@ -208,25 +245,23 @@ def plan(
     height_mm: float | None,
     paper: str = "A4",
     orientation: str = "auto",
-    scale: float = 1.0,
+    scale_x: float = 1.0,
+    scale_y: float = 1.0,
 ) -> Layout:
     """Lay the image out on the paper.
 
-    `scale` is the printer's calibration: a printer whose ruler came out at
-    98 mm gets 100 / 98, and everything is drawn that much larger about the
-    centre of the page so it comes off the printer at its real size.
+    `scale_x` and `scale_y` are the printer's calibration: a printer whose
+    bottom ruler came out at 98 mm gets 100 / 98 across, and everything is
+    drawn that much wider about the centre of the page so it comes off the
+    printer at its real size. The left ruler does the same for the height.
     """
-    if not MIN_SCALE <= scale <= MAX_SCALE:
-        raise LayoutError(
-            f"A calibration of ×{scale:.3f} means the ruler measured {100 / scale:.0f} mm. "
-            f"That far off is a print setting, not the printer: print at 100% / "
-            f'"Actual size" and calibrate again.'
-        )
+    _check_scale(scale_x, "across")
+    _check_scale(scale_y, "down")
     trim_w, trim_h = target_size(image_px, width_mm, height_mm)
-    page_w, page_h = _page(paper, orientation, trim_w, trim_h, scale)
+    page_w, page_h = _page(paper, orientation, trim_w, trim_h, scale_x, scale_y)
     # Lay the page out in printed millimetres on the sheet as the printer
     # will shrink or stretch it, then scale the drawing to the real sheet.
-    sheet_w, sheet_h = page_w / scale, page_h / scale
+    sheet_w, sheet_h = page_w / scale_x, page_h / scale_y
     if not _fits(sheet_w, sheet_h, trim_w, trim_h):
         raise DoesNotFit(
             paper,
@@ -234,13 +269,14 @@ def plan(
             trim_h,
             page_w,
             page_h,
-            max_w=sheet_w - 2 * MARGIN - 2 * BLEED,
+            max_w=sheet_w - SIDE_BAND - MARGIN - 2 * BLEED,
             max_h=sheet_h - MARGIN - RULER_BAND - 2 * BLEED,
         )
 
-    # Centre the trim box in the space above the ruler band.
+    # Centre the trim box in the space right of the side band and above
+    # the ruler band.
     trim = Box(
-        (sheet_w - trim_w) / 2,
+        SIDE_BAND + (sheet_w - SIDE_BAND - MARGIN - trim_w) / 2,
         RULER_BAND + (sheet_h - RULER_BAND - MARGIN - trim_h) / 2,
         trim_w,
         trim_h,
@@ -258,11 +294,13 @@ def plan(
         paper=paper,
         page_w=page_w,
         page_h=page_h,
-        trim=trim.scaled(scale),
-        bleed=bleed.scaled(scale),
-        image=image.scaled(scale),
-        ruler_x=(sheet_w - RULER_LEN) / 2 * scale,
-        ruler_y=RULER_Y * scale,
+        trim=trim.scaled(scale_x, scale_y),
+        bleed=bleed.scaled(scale_x, scale_y),
+        image=image.scaled(scale_x, scale_y),
+        ruler_x=(sheet_w - RULER_LEN) / 2 * scale_x,
+        ruler_y=RULER_Y * scale_y,
+        side_ruler_x=RULER_X * scale_x,
         dpi=iw / (draw_w / 25.4),
-        scale=scale,
+        scale_x=scale_x,
+        scale_y=scale_y,
     )

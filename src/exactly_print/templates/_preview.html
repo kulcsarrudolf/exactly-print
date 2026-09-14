@@ -14,11 +14,12 @@
           {{ dpi }} dpi
           {% if layout.soft %}<span class="warn">— under 150 dpi, the print will look soft</span>{% endif %}
         </dd>
-        {% if printer or layout.scale != 1 %}
+        {% if printer or layout.calibrated %}
           <dt>Printer</dt>
           <dd>
-            {% if printer %}{{ printer }}: {% endif %}prints {{ prints_at }} mm per 100, so the
-            page is drawn at ×{{ "%.3f"|format(layout.scale) }} to come out right.
+            {% if printer %}{{ printer }}: {% endif %}prints
+            {% if prints_at_x == prints_at_y %}{{ prints_at_x }} mm per 100{% else %}{{ prints_at_x }} mm per 100 across and {{ prints_at_y }} down{% endif %},
+            so the page is drawn at {{ layout.drawn_at() }} to come out right.
           </dd>
         {% endif %}
       </dl>

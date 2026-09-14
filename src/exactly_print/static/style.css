@@ -240,13 +240,23 @@ dialog p {
 
 dialog .measured {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr 1fr auto;
   gap: 10px;
   align-items: end;
 }
 
 dialog .measured select {
   width: auto;
+}
+
+@media (max-width: 480px) {
+  dialog .measured {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  dialog .measured select {
+    width: 100%;
+  }
 }
 
 dialog .hint,
