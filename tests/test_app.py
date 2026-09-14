@@ -80,3 +80,57 @@ def test_pdf_inline_for_printing():
         data={"width": "50", "disposition": "inline"},
     )
     assert r.headers["content-disposition"].startswith("inline;")
+
+
+def test_index_has_the_calibration_and_the_help():
+    r = client.get("/")
+    assert 'name="scale"' in r.text
+    assert 'id="calibrate"' in r.text
+    assert 'id="help-calibrate"' in r.text
+    assert "/static/calibrate.js" in r.text
+
+
+def test_preview_with_a_calibrated_printer_says_so():
+    r = client.post(
+        "/preview",
+        files={"image": ("a.png", png_bytes(), "image/png")},
+        data={"width": "12", "unit": "cm", "scale": "1.020408", "printer": "HP LaserJet"},
+    )
+    assert r.status_code == 200
+    assert "12 × 17 cm" in r.text
+    assert "HP LaserJet: prints 98.0 mm per 100" in r.text
+    assert "drawn at ×1.020" in r.text
+
+
+def test_preview_without_a_printer_has_no_printer_row():
+    r = client.post(
+        "/preview",
+        files={"image": ("a.png", png_bytes(), "image/png")},
+        data={"width": "12", "unit": "cm", "scale": "", "printer": ""},
+    )
+    assert "<dt>Printer</dt>" not in r.text
+
+
+def test_bad_calibration_is_explained():
+    r = client.post(
+        "/preview",
+        files={"image": ("a.png", png_bytes(), "image/png")},
+        data={"width": "12", "unit": "cm", "scale": "1.5"},
+    )
+    assert "the ruler measured 67 mm" in r.text
+    r = client.post(
+        "/preview",
+        files={"image": ("a.png", png_bytes(), "image/png")},
+        data={"width": "12", "unit": "cm", "scale": "abc"},
+    )
+    assert "is not a calibration factor." in r.text
+
+
+def test_pdf_carries_the_printer_in_the_caption():
+    r = client.post(
+        "/pdf",
+        files={"image": ("a.png", png_bytes(), "image/png")},
+        data={"width": "120", "height": "170", "scale": "1.020408", "printer": "HP LaserJet"},
+    )
+    assert r.status_code == 200
+    assert b"Calibrated for HP LaserJet, drawn at \xd71.020" in r.content

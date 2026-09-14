@@ -84,3 +84,48 @@ def test_forced_portrait_refuses_what_only_fits_landscape():
 def test_soft_flag():
     assert plan((300, 300), 100, None).soft
     assert not plan((3000, 3000), 100, None).soft
+
+
+def test_calibration_draws_the_page_larger_but_reports_the_print():
+    plain = plan((1488, 2078), 120, 170, "A4")
+    layout = plan((1488, 2078), 120, 170, "A4", scale=1.02)
+    # The sheet is still the real A4; the drawing on it is 2 % larger.
+    assert (layout.page_w, layout.page_h) == (210, 297)
+    assert layout.trim.w == pytest.approx(120 * 1.02)
+    assert layout.trim.h == pytest.approx(170 * 1.02)
+    assert layout.ruler_len == pytest.approx(102)
+    # Scaled about the centre of the page, so the trim stays centred.
+    assert layout.trim.x + layout.trim.w / 2 == pytest.approx(105)
+    # The resolution is that of the print, which is what the eye sees.
+    assert layout.dpi == pytest.approx(plain.dpi)
+    assert layout.marks[0][2] - layout.marks[0][0] == pytest.approx(-7 * 1.02)
+
+
+def test_calibration_leaves_less_room_on_the_sheet():
+    plan((100, 100), 194, 100, "A4", "portrait")
+    with pytest.raises(DoesNotFit) as info:
+        plan((100, 100), 194, 100, "A4", "portrait", scale=1.05)
+    assert "does not fit on A4 (210 × 297 mm)" in str(info.value)
+    assert "184 × 246.9 mm" in str(info.value)
+
+
+def test_calibration_out_of_range_is_a_setting_not_a_printer():
+    with pytest.raises(LayoutError) as info:
+        plan((100, 100), 50, None, scale=1.5)
+    assert "the ruler measured 67 mm" in str(info.value)
+    assert "print setting" in str(info.value)
+    with pytest.raises(LayoutError):
+        plan((100, 100), 50, None, scale=0.7)
+
+
+def test_describe_names_the_printer_in_real_millimetres():
+    layout = plan((1488, 2078), 120, 170, "A4", scale=100 / 98)
+    text = layout.describe("mm", "HP LaserJet")
+    assert text.startswith("Image 120 × 170 mm  ·  Paper A4 portrait, 210 × 297 mm")
+    assert text.endswith("Calibrated for HP LaserJet, drawn at ×1.020")
+    assert plan((1488, 2078), 120, 170, "A4").describe("mm", "").endswith("dpi")
+    assert (
+        plan((1488, 2078), 120, 170, "A4", scale=0.99)
+        .describe()
+        .endswith("Calibrated, drawn at ×0.990")
+    )

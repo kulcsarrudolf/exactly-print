@@ -32,6 +32,20 @@ footer {
 
 header {
   padding: 32px 0 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+}
+
+header nav a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+header nav a:hover {
+  text-decoration: underline;
 }
 
 header h1 {
@@ -84,6 +98,14 @@ fieldset {
 
 fieldset.paper {
   grid-template-columns: 1fr 1fr;
+}
+
+fieldset.printer {
+  grid-template-columns: 1fr auto auto;
+}
+
+fieldset.printer button {
+  padding: 8px 12px;
 }
 
 legend {
@@ -166,6 +188,110 @@ button.secondary {
 
 button.secondary:hover {
   background: #f6eef0;
+}
+
+button.quiet {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--muted);
+  font-weight: 500;
+}
+
+button.quiet:hover {
+  background: #f3f3f1;
+  border-color: var(--muted);
+  color: var(--ink);
+}
+
+button[hidden] {
+  display: none;
+}
+
+dialog {
+  width: min(440px, calc(100vw - 32px));
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 24px;
+  color: var(--ink);
+  background: var(--card);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18);
+}
+
+dialog::backdrop {
+  background: rgba(31, 31, 31, 0.4);
+}
+
+dialog form {
+  border: 0;
+  padding: 0;
+  gap: 14px;
+}
+
+dialog h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+dialog p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+dialog .measured {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
+dialog .measured select {
+  width: auto;
+}
+
+dialog .hint,
+dialog .error {
+  min-height: 0;
+}
+
+dialog .error:empty,
+dialog .hint:empty {
+  display: none;
+}
+
+.help {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 8px 0 40px;
+}
+
+.help h2 {
+  font-size: 22px;
+  margin: 0 0 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.help h3 {
+  font-size: 16px;
+  margin: 24px 0 6px;
+  scroll-margin-top: 16px;
+}
+
+.help p,
+.help li {
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+
+.help ul,
+.help ol {
+  padding-left: 22px;
+  margin: 0;
+}
+
+.help li + li {
+  margin-top: 6px;
 }
 
 .busy {

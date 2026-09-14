@@ -43,3 +43,24 @@ def test_preview_is_the_page_at_four_pixels_per_mm():
     png = render_preview(layout, image)
     preview = Image.open(BytesIO(png))
     assert preview.size == (840, 1188)
+
+
+def test_calibrated_pdf_draws_the_trim_box_scaled_on_the_real_sheet():
+    image = Image.new("RGB", (600, 850))
+    layout = plan(image.size, 120, 170, "A4", scale=1.02)
+    pdf = write_pdf(layout, image)
+    assert f"/MediaBox [0 0 {210 * PT:.3f} {297 * PT:.3f}]".encode() in pdf
+    m = re.search(rb"/TrimBox \[([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+)\]", pdf)
+    x0, _, x1, _ = (float(v) for v in m.groups())
+    assert (x1 - x0) / PT == pytest.approx(120 * 1.02, abs=0.001)
+    # The ruler line runs 102 mm and the ticks sit 1.02 mm apart.
+    rx = layout.ruler_x
+    assert f"{rx * PT:.3f} {layout.ruler_y * PT:.3f} m {(rx + 102) * PT:.3f}".encode() in pdf
+    assert f"{(rx + 1.02) * PT:.3f} {layout.ruler_y * PT:.3f} m".encode() in pdf
+
+
+def test_calibrated_preview_is_still_the_real_sheet():
+    image = Image.new("RGB", (600, 850))
+    layout = plan(image.size, 120, 170, "A4", scale=1.02)
+    preview = Image.open(BytesIO(render_preview(layout, image, layout.describe("mm", "HP"))))
+    assert preview.size == (840, 1188)

@@ -67,14 +67,32 @@ def parse_length(raw: str, unit: str) -> float | None:
         raise RequestError(f"'{raw}' is not a number.") from e
 
 
+def parse_scale(raw: str) -> float:
+    """The printer's calibration factor, sent by the browser from the
+    printer the user picked; an empty field means an uncalibrated printer."""
+    raw = raw.strip().replace(",", ".")
+    if not raw:
+        return 1.0
+    try:
+        return float(raw)
+    except ValueError as e:
+        raise RequestError(f"'{raw}' is not a calibration factor.") from e
+
+
 def build(
-    image: Image.Image, width: str, height: str, unit: str, paper: str, orientation: str
+    image: Image.Image,
+    width: str,
+    height: str,
+    unit: str,
+    paper: str,
+    orientation: str,
+    scale: str = "",
 ) -> Layout:
     if unit not in MM_PER_UNIT:
         raise RequestError("Pick mm or cm.")
     try:
         w, h = parse_length(width, unit), parse_length(height, unit)
-        return plan(image.size, w, h, paper, orientation)
+        return plan(image.size, w, h, paper, orientation, parse_scale(scale))
     except DoesNotFit as e:
         raise RequestError(e.message(unit)) from e
     except LayoutError as e:
@@ -105,13 +123,16 @@ async def preview(
     unit: str = Form("mm"),
     paper: str = Form("A4"),
     orientation: str = Form("auto"),
+    scale: str = Form(""),
+    printer: str = Form(""),
 ):
     try:
         img = await read_image(image)
-        layout = build(img, width, height, unit, paper, orientation)
+        layout = build(img, width, height, unit, paper, orientation, scale)
     except RequestError as e:
         return templates.TemplateResponse(request, "_preview.html", {"error": str(e)})
-    png = render_preview(layout, img, layout.describe(unit))
+    printer = printer.strip()
+    png = render_preview(layout, img, layout.describe(unit, printer))
     return templates.TemplateResponse(
         request,
         "_preview.html",
@@ -119,8 +140,11 @@ async def preview(
             "png": base64.b64encode(png).decode(),
             "layout": layout,
             "unit": unit,
-            "trim_w": fmt_size(layout.trim.w, unit),
-            "trim_h": fmt_size(layout.trim.h, unit),
+            "printer": printer,
+            "prints_at": f"{100 / layout.scale:.1f}",
+            # The size on paper, not the slightly scaled drawing of it.
+            "trim_w": fmt_size(layout.trim.w / layout.scale, unit),
+            "trim_h": fmt_size(layout.trim.h / layout.scale, unit),
             "page_w": fmt_size(layout.page_w, unit),
             "page_h": fmt_size(layout.page_h, unit),
             "dpi": round(layout.dpi),
@@ -137,14 +161,16 @@ async def pdf(
     unit: str = Form("mm"),
     paper: str = Form("A4"),
     orientation: str = Form("auto"),
+    scale: str = Form(""),
+    printer: str = Form(""),
     disposition: str = Form("attachment"),
 ):
     try:
         img = await read_image(image)
-        layout = build(img, width, height, unit, paper, orientation)
+        layout = build(img, width, height, unit, paper, orientation, scale)
     except RequestError as e:
         return index_page(request, str(e))
-    data = write_pdf(layout, img, layout.describe(unit))
+    data = write_pdf(layout, img, layout.describe(unit, printer.strip()))
     name = f"exactly-print-{layout.trim.w:.0f}x{layout.trim.h:.0f}mm-{layout.paper}.pdf"
     kind = "inline" if disposition == "inline" else "attachment"
     return Response(
