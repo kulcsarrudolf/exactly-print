@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "exactly-print"
+version = "0.1.0"
+description = "Upload an image, pick a size, print it exactly that size."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { file = "LICENSE" }
+authors = [{ name = "Kulcsár Rudolf" }]
+keywords = ["print", "pdf", "image", "size", "crop marks", "htmx"]
+dependencies = [
+    "fastapi>=0.115",
+    "jinja2>=3.1",
+    "pillow>=11",
+    "python-multipart>=0.0.20",
+    "uvicorn[standard]>=0.34",
+]
+
+[project.urls]
+Homepage = "https://github.com/kulcsarrudolf/exactly-print"
+Repository = "https://github.com/kulcsarrudolf/exactly-print"
+Issues = "https://github.com/kulcsarrudolf/exactly-print/issues"
+
+[dependency-groups]
+dev = ["httpx>=0.28", "pytest>=8", "ruff>=0.6"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/exactly_print"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# FastAPI declares parameters as `File(...)` and `Form(...)` defaults on purpose.
+ignore = ["B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

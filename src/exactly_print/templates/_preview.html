@@ -1,0 +1,24 @@
+{% if error %}
+  <p class="error">{{ error }}</p>
+{% else %}
+  <figure>
+    <img src="data:image/png;base64,{{ png }}" alt="Preview of the printed page" />
+    <figcaption>
+      <dl>
+        <dt>Printed size</dt>
+        <dd>{{ trim_w }} × {{ trim_h }} {{ unit }}</dd>
+        <dt>Paper</dt>
+        <dd>{{ layout.paper }}, {{ page_w }} × {{ page_h }} {{ unit }}</dd>
+        <dt>Resolution</dt>
+        <dd>
+          {{ dpi }} dpi
+          {% if layout.soft %}<span class="warn">— under 150 dpi, the print will look soft</span>{% endif %}
+        </dd>
+      </dl>
+      <p class="hint">
+        The red line is where you cut; the image runs 2 mm past it on every side so a slightly
+        off cut still shows image, not paper.
+      </p>
+    </figcaption>
+  </figure>
+{% endif %}

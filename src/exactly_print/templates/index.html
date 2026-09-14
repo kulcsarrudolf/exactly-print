@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Exactly Print</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <script src="/static/htmx.min.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <h1>Exactly Print</h1>
+      <p>Upload an image, pick a size, print it exactly that size.</p>
+    </header>
+
+    <main>
+      <form
+        id="setup"
+        hx-post="/preview"
+        hx-target="#preview"
+        hx-encoding="multipart/form-data"
+        hx-trigger="change, input changed delay:500ms"
+        hx-indicator="#busy"
+        method="post"
+        action="/pdf"
+      >
+        <label class="file">
+          <span>Image</span>
+          <input type="file" name="image" accept="image/*" required />
+        </label>
+
+        <fieldset class="size">
+          <legend>Printed size</legend>
+          <label>
+            <span>Width</span>
+            <input type="text" name="width" inputmode="decimal" placeholder="120" />
+          </label>
+          <span class="times">×</span>
+          <label>
+            <span>Height</span>
+            <input type="text" name="height" inputmode="decimal" placeholder="170" />
+          </label>
+          <label>
+            <span>Unit</span>
+            <select name="unit">
+              {% for u in units %}<option value="{{ u }}">{{ u }}</option>{% endfor %}
+            </select>
+          </label>
+          <p class="hint">
+            Leave one side empty to keep the image's proportions. Give both and the image is
+            scaled to cover the size and cropped evenly.
+          </p>
+        </fieldset>
+
+        <fieldset class="paper">
+          <legend>Paper</legend>
+          <label>
+            <span>Size</span>
+            <select name="paper">
+              {% for p in papers %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+            </select>
+          </label>
+          <label>
+            <span>Orientation</span>
+            <select name="orientation">
+              <option value="auto">Auto</option>
+              <option value="portrait">Portrait</option>
+              <option value="landscape">Landscape</option>
+            </select>
+          </label>
+        </fieldset>
+
+        <div class="actions">
+          <button type="submit" name="disposition" value="attachment">Download PDF</button>
+          <button type="submit" name="disposition" value="inline" formtarget="_blank" class="secondary">
+            Open to print
+          </button>
+          <span id="busy" class="busy" aria-hidden="true">Rendering…</span>
+        </div>
+        {% if error %}<p class="error">{{ error }}</p>{% endif %}
+      </form>
+
+      <section id="preview" aria-live="polite">
+        <p class="placeholder">The preview appears here once you choose an image and a size.</p>
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        Every page carries a 100 mm ruler. Print at 100% / "Actual size", never "Fit to page",
+        then check the ruler before you cut. Nothing you upload is stored.
+      </p>
+      <p><a href="https://github.com/kulcsarrudolf/exactly-print">Source on GitHub</a></p>
+    </footer>
+  </body>
+</html>
