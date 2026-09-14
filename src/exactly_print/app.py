@@ -1,4 +1,4 @@
-"""The web app: one page, one preview partial, one PDF endpoint.
+"""The web app: one page, a help page, one preview partial, one PDF endpoint.
 
 Nothing is stored. The browser keeps the file in its file input and sends it
 again with every preview and every download, so the server holds an image
@@ -114,6 +114,11 @@ def index_page(request: Request, error: str | None = None):
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     return index_page(request)
+
+
+@app.get("/help", response_class=HTMLResponse)
+async def help_page(request: Request):
+    return templates.TemplateResponse(request, "help.html", {})
 
 
 @app.post("/preview", response_class=HTMLResponse)

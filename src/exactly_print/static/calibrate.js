@@ -181,7 +181,6 @@
   });
 
   document.getElementById("calibrate-cancel").addEventListener("click", () => dialog.close());
-  document.getElementById("calibrate-help").addEventListener("click", () => dialog.close());
 
   calForm.addEventListener("submit", (event) => {
     event.preventDefault();

@@ -1,0 +1,82 @@
+{% extends "_base.html" %}
+{% block title %}Help · Exactly Print{% endblock %}
+{% block tagline %}How to get a print that measures what you asked for.{% endblock %}
+{% block nav %}<a href="/">Back to printing</a>{% endblock %}
+{% block content %}
+    <section id="help" class="help">
+      <h2 id="help-why">Why a print comes out the wrong size</h2>
+      <p>
+        The PDF says exactly how large everything is: a 120 mm wide image is 120 mm wide in the
+        file. Between the file and the paper, though, three things can change that.
+      </p>
+      <ul>
+        <li>
+          <strong>The print dialog scales the page.</strong> Browsers and PDF viewers often default
+          to "Fit to page", "Shrink to fit" or "Fit to printable area", which shrinks the whole
+          page by a few percent so nothing lands in the border the printer cannot reach. The same
+          happens when the paper picked in the dialog is not the paper the page was made for, say
+          Letter instead of A4. Choose <em>100%</em> or <em>"Actual size"</em>, and the paper size
+          the page names.
+        </li>
+        <li>
+          <strong>The printer driver has a scale of its own.</strong> Some drivers keep a "scale
+          to printable area" or a stored zoom, and apply it on top of whatever the dialog says.
+          It hides in the driver's own settings, not in the browser's.
+        </li>
+        <li>
+          <strong>The machine itself is not perfect.</strong> Paper is pulled through by rollers,
+          and half a percent of slip along the way is normal. Laser printers also heat the sheet,
+          which shrinks it a little. This part is small, but it is the same on every print from
+          that printer, which is exactly what a calibration can cancel.
+        </li>
+      </ul>
+
+      <h2 id="help-ruler">What the rulers tell you</h2>
+      <p>
+        Every page carries two 100 mm rulers: one along the bottom, one up the left edge. If both
+        measure 100 mm on paper, the image is the size you asked for. If they do not, first look
+        for the scaling in the print dialog and the driver; a ruler that is 5 mm or more off is
+        almost always a setting. If every print from the same printer is off by the same small
+        amount, calibrate. The two rulers are separate because printers rarely err the same way
+        in both directions: the rollers stretch or slip along the direction the paper travels,
+        while the width is set by the print head and is usually closer to true.
+      </p>
+
+      <h2 id="help-calibrate">Calibrating a printer</h2>
+      <ol>
+        <li>Under <em>Printer</em>, leave the calibration on <em>None</em> and print any page at 100%.</li>
+        <li>
+          Measure both rulers from the 0 to the 100 mark. A tenth of a millimetre matters here.
+        </li>
+        <li>
+          Click <em>Calibrate…</em>, name the printer, say that the page was printed with no
+          calibration, and type what the bottom and the left ruler measured.
+        </li>
+        <li>
+          From then on, with that printer chosen, the page is drawn 100 ÷ measured times its real
+          size, across and down separately. A printer that made the bottom ruler 98 mm and the
+          left one 99 mm gets a page drawn at ×1.020 across and ×1.010 down, and its own
+          shrinking brings both rulers back to 100 mm. Print once more and measure to confirm.
+        </li>
+        <li>
+          If the ruler is still slightly off, calibrate again: under <em>The page was printed
+          with</em> choose the printer, and the new measurement is stacked on the old
+          correction instead of replacing it.
+        </li>
+      </ol>
+      <p>
+        A calibration belongs to a printer <em>and</em> its settings: a different tray, paper or
+        driver may need one of its own, so name them. The rulers take a strip of the sheet, which
+        is why the largest image is a little smaller than the paper; a print that does not fit
+        upright goes on the sheet sideways, and then the two directions swap roles, which the
+        calibration already accounts for.
+      </p>
+
+      <h2 id="help-storage">Where the settings live</h2>
+      <p>
+        Printers and their calibrations are kept in this browser's local storage on this device.
+        The server only ever receives the chosen factor and name along with each preview and
+        PDF, and keeps nothing. Clearing the site's data in the browser removes the printers.
+      </p>
+    </section>
+{% endblock %}
