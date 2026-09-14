@@ -42,19 +42,22 @@ def render_preview(
     t = layout.trim
     draw.rectangle([pt(t.x, t.top), pt(t.right, t.y)], outline=GUIDE, width=1)
 
-    k = layout.scale
-    rx, ry = layout.ruler_x, layout.ruler_y
+    kx, ky = layout.scale_x, layout.scale_y
+    rx, ry, sx = layout.ruler_x, layout.ruler_y, layout.side_ruler_x
     draw.line([pt(rx, ry), pt(rx + layout.ruler_len, ry)], fill=INK, width=1)
+    draw.line([pt(sx, ry), pt(sx, ry + layout.side_ruler_len)], fill=INK, width=1)
     for mm in range(int(RULER_LEN) + 1):
-        tick = (5 if mm % 10 == 0 else 3 if mm % 5 == 0 else 1.5) * k
-        draw.line([pt(rx + mm * k, ry), pt(rx + mm * k, ry + tick)], fill=INK, width=1)
+        tick = 5 if mm % 10 == 0 else 3 if mm % 5 == 0 else 1.5
+        draw.line([pt(rx + mm * kx, ry), pt(rx + mm * kx, ry + tick * ky)], fill=INK, width=1)
+        draw.line([pt(sx, ry + mm * ky), pt(sx + tick * kx, ry + mm * ky)], fill=INK, width=1)
     for mm in range(0, int(RULER_LEN) + 1, 10):
-        draw.text(pt(rx + mm * k, ry + 9 * k), str(mm), fill=INK, anchor="mm")
+        draw.text(pt(rx + mm * kx, ry + 9 * ky), str(mm), fill=INK, anchor="mm")
+        draw.text(pt(sx + 9 * kx, ry + mm * ky), str(mm), fill=INK, anchor="mm")
     if caption:
         # Pillow's bundled font has no multiplication sign; the PDF keeps it.
         font = ImageFont.load_default(size=3 * s)
         text = caption.replace("×", "x")
-        draw.text(pt(layout.page_w / 2, ry - 5 * k), text, fill=INK, anchor="mm", font=font)
+        draw.text(pt(layout.page_w / 2, ry - 5 * ky), text, fill=INK, anchor="mm", font=font)
 
     out = BytesIO()
     page.save(out, "PNG", optimize=True)

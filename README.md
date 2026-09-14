@@ -7,7 +7,7 @@ Printing an image at a real-world size is harder than it should be: the print di
 - the image at the size you asked for, placed by physical millimetres, not pixels;
 - a 2 mm bleed past the cut line, so a slightly imprecise cut still shows image, not paper;
 - crop marks in the four corners;
-- a 100 mm ruler along the bottom, so one measurement on a test print tells you whether the printer scaled the page;
+- two 100 mm rulers, one along the bottom and one up the left edge, so a test print tells you whether the printer scaled the page, and by how much in each direction;
 - a per-printer calibration, so a printer that always comes out a little small or large can be corrected once and forgotten.
 
 Nothing is stored: the browser sends the image with every preview and every download, and the server holds it only for the length of the request.
@@ -34,17 +34,17 @@ uv run uvicorn exactly_print.app:app --reload
 3. Pick the paper size. Orientation is automatic unless you set it.
 4. The preview updates as you type. The red line is where you cut.
 5. **Download PDF**, or **Open to print** and print from the browser.
-6. Print at **100% / "Actual size"** on the paper size the page names. Never "Fit to page". Measure the ruler on the first print: if it is 100 mm, the image is the size you asked for.
+6. Print at **100% / "Actual size"** on the paper size the page names. Never "Fit to page". Measure the rulers on the first print: if both are 100 mm, the image is the size you asked for.
 
 ## Calibrate a printer
 
-Print dialogs and drivers like to scale the page a few percent, and even at 100% the rollers and the heat of a printer stretch or shrink the sheet by a fraction. If the ruler on every print from one printer is off by the same amount, that printer can be calibrated:
+Print dialogs and drivers like to scale the page a few percent, and even at 100% the rollers and the heat of a printer stretch or shrink the sheet by a fraction, usually more along the direction the paper travels than across it. If the rulers on every print from one printer are off by the same amount, that printer can be calibrated:
 
 1. Under **Printer**, leave the calibration on **None** and print a page at 100%.
-2. Measure the ruler from the 0 to the 100 mark.
-3. Click **Calibrate…**, name the printer and type what the ruler measured.
+2. Measure both rulers from the 0 to the 100 mark.
+3. Click **Calibrate…**, name the printer and type what the bottom and the left ruler measured.
 
-From then on, with that printer chosen, the whole page is drawn 100 ÷ measured times its real size about the centre of the sheet, so the printer's own scaling brings the ruler back to 100 mm. A second round stacks on the first: choose the printer under *The page was printed with* and enter the new measurement. Printers are saved in the browser's local storage, on that device only; the server receives just the factor and the name along with each request. The **Help** section on the page explains the causes in more detail.
+From then on, with that printer chosen, the whole page is drawn 100 ÷ measured times its real size, across and down separately, so the printer's own scaling brings both rulers back to 100 mm. A second round stacks on the first: choose the printer under *The page was printed with* and enter the new measurements. Printers are saved in the browser's local storage, on that device only; the server receives just the factor and the name along with each request. The **Help** section on the page explains the causes in more detail.
 
 ## How it is built
 

@@ -82,13 +82,14 @@
               <option value="">None — print at 100%</option>
             </select>
           </label>
-          <input type="hidden" name="scale" value="" />
+          <input type="hidden" name="scale_x" value="" />
+          <input type="hidden" name="scale_y" value="" />
           <button type="button" id="calibrate-open" class="secondary">Calibrate…</button>
           <button type="button" id="printer-remove" class="quiet" hidden>Remove</button>
           <p class="hint">
-            If the ruler on a print is not 100 mm, calibrate the printer once and pick it here;
-            the page is then drawn a little larger or smaller so it prints at the right size.
-            <a href="#help-calibrate">How it works.</a>
+            If the rulers on a print are not 100 mm, calibrate the printer once and pick it here;
+            the page is then drawn a little larger or smaller, across and down separately, so it
+            prints at the right size. <a href="#help-calibrate">How it works.</a>
           </p>
         </fieldset>
 
@@ -111,9 +112,8 @@
       <form id="calibrate-form" novalidate>
         <h2 id="calibrate-title">Calibrate a printer</h2>
         <p>
-          Print any page at 100% / "Actual size" and measure the ruler along the bottom with a
-          steel ruler, from the 0 to the 100 mark, as precisely as you can. Then say what you
-          got.
+          Print any page at 100% / "Actual size" and measure both rulers with a steel ruler,
+          from the 0 to the 100 mark, as precisely as you can. Then say what each measured.
         </p>
         <label>
           <span>Printer name</span>
@@ -125,8 +125,12 @@
         </label>
         <div class="measured">
           <label>
-            <span>The ruler measured</span>
-            <input type="text" name="measured" inputmode="decimal" required placeholder="98.5" autocomplete="off" />
+            <span>Bottom ruler</span>
+            <input type="text" name="measured_x" inputmode="decimal" required placeholder="98.5" autocomplete="off" />
+          </label>
+          <label>
+            <span>Left ruler</span>
+            <input type="text" name="measured_y" inputmode="decimal" placeholder="same" autocomplete="off" />
           </label>
           <label>
             <span>Unit</span>
@@ -135,6 +139,10 @@
             </select>
           </label>
         </div>
+        <p class="hint">
+          Leave the left ruler empty if the print only has the bottom one; the same correction
+          is then used both ways.
+        </p>
         <p id="calibrate-result" class="hint" aria-live="polite"></p>
         <p id="calibrate-error" class="error" aria-live="polite"></p>
         <div class="actions">
@@ -178,26 +186,32 @@
         </li>
       </ul>
 
-      <h3 id="help-ruler">What the ruler tells you</h3>
+      <h3 id="help-ruler">What the rulers tell you</h3>
       <p>
-        Every page carries a 100 mm ruler. If it measures 100 mm on paper, the image is the size
-        you asked for. If it does not, first look for the scaling in the print dialog and the
-        driver; a ruler that is 5 mm or more off is almost always a setting. If every print from
-        the same printer is off by the same small amount, calibrate.
+        Every page carries two 100 mm rulers: one along the bottom, one up the left edge. If both
+        measure 100 mm on paper, the image is the size you asked for. If they do not, first look
+        for the scaling in the print dialog and the driver; a ruler that is 5 mm or more off is
+        almost always a setting. If every print from the same printer is off by the same small
+        amount, calibrate. The two rulers are separate because printers rarely err the same way
+        in both directions: the rollers stretch or slip along the direction the paper travels,
+        while the width is set by the print head and is usually closer to true.
       </p>
 
       <h3 id="help-calibrate">Calibrating a printer</h3>
       <ol>
         <li>Under <em>Printer</em>, leave the calibration on <em>None</em> and print any page at 100%.</li>
-        <li>Measure the ruler from the 0 to the 100 mark. A tenth of a millimetre matters here.</li>
+        <li>
+          Measure both rulers from the 0 to the 100 mark. A tenth of a millimetre matters here.
+        </li>
         <li>
           Click <em>Calibrate…</em>, name the printer, say that the page was printed with no
-          calibration, and type what the ruler measured.
+          calibration, and type what the bottom and the left ruler measured.
         </li>
         <li>
           From then on, with that printer chosen, the page is drawn 100 ÷ measured times its real
-          size. A printer that made the ruler 98 mm gets a page drawn at ×1.020, and its own
-          shrinking brings the ruler back to 100 mm. Print once more and measure to confirm.
+          size, across and down separately. A printer that made the bottom ruler 98 mm and the
+          left one 99 mm gets a page drawn at ×1.020 across and ×1.010 down, and its own
+          shrinking brings both rulers back to 100 mm. Print once more and measure to confirm.
         </li>
         <li>
           If the ruler is still slightly off, calibrate again: under <em>The page was printed
@@ -206,11 +220,11 @@
         </li>
       </ol>
       <p>
-        One factor is applied in both directions. A printer that stretches the sheet along the
-        feed direction only cannot be corrected exactly, but the error that remains is the
-        difference between the two directions, which is far smaller than the whole. A
-        calibration also belongs to a printer <em>and</em> its settings: a different tray, paper
-        or driver may need one of its own, so name them.
+        A calibration belongs to a printer <em>and</em> its settings: a different tray, paper or
+        driver may need one of its own, so name them. The rulers take a strip of the sheet, which
+        is why the largest image is a little smaller than the paper; a print that does not fit
+        upright goes on the sheet sideways, and then the two directions swap roles, which the
+        calibration already accounts for.
       </p>
 
       <h3 id="help-storage">Where the settings live</h3>

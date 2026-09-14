@@ -1,9 +1,10 @@
 // Printer calibration, kept in this browser.
 //
-// A printer that makes the 100 mm ruler come out at 98 mm gets a factor of
-// 100 / 98; the server draws the page that much larger so the printer's own
-// shrinking brings it back. The list of printers and the one last chosen live
-// in localStorage, and the chosen factor travels with the form as `scale`.
+// A printer that makes the bottom 100 mm ruler come out at 98 mm gets a
+// factor of 100 / 98 across, and the left ruler gives one down; the server
+// draws the page that much larger so the printer's own shrinking brings it
+// back. The list of printers and the one last chosen live in localStorage,
+// and the chosen factors travel with the form as `scale_x` and `scale_y`.
 (() => {
   const PRINTERS = "exactly-print.printers";
   const CHOSEN = "exactly-print.printer";
@@ -13,13 +14,14 @@
 
   const form = document.getElementById("setup");
   const select = document.getElementById("printer");
-  const scaleField = form.elements.scale;
   const removeButton = document.getElementById("printer-remove");
   const dialog = document.getElementById("calibrate");
   const calForm = document.getElementById("calibrate-form");
   const result = document.getElementById("calibrate-result");
   const problem = document.getElementById("calibrate-error");
   if (!form || !select || !dialog || !calForm) return;
+  const scaleX = form.elements.scale_x;
+  const scaleY = form.elements.scale_y;
 
   const read = (key) => {
     try {
@@ -36,13 +38,19 @@
     }
   };
 
+  // Entries saved before the left ruler existed carry one `factor`; it
+  // stands for both directions until the printer is calibrated again.
+  const upgrade = (p) => {
+    if (!p || typeof p.name !== "string" || !p.name.trim()) return null;
+    const x = Number.isFinite(p.factorX) ? p.factorX : p.factor;
+    const y = Number.isFinite(p.factorY) ? p.factorY : x;
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    return { ...p, factorX: x, factorY: y };
+  };
   const loadPrinters = () => {
     try {
       const list = JSON.parse(read(PRINTERS) || "[]");
-      if (!Array.isArray(list)) return [];
-      return list.filter(
-        (p) => p && typeof p.name === "string" && p.name.trim() && Number.isFinite(p.factor)
-      );
+      return Array.isArray(list) ? list.map(upgrade).filter(Boolean) : [];
     } catch {
       return [];
     }
@@ -52,7 +60,11 @@
   const find = (name) => printers.find((p) => p.name === name);
 
   // How the printer behaves without a correction: mm printed per 100 mm asked.
-  const printsAt = (factor) => (100 / factor).toFixed(1);
+  const printsAt = (p) => {
+    const x = (100 / p.factorX).toFixed(1);
+    const y = (100 / p.factorY).toFixed(1);
+    return x === y ? `${x} mm per 100` : `${x} × ${y} mm per 100`;
+  };
 
   const fillPrinterOptions = (target, chosen) => {
     target.replaceChildren();
@@ -63,7 +75,7 @@
     for (const p of printers) {
       const option = document.createElement("option");
       option.value = p.name;
-      option.textContent = `${p.name} — prints ${printsAt(p.factor)} mm per 100`;
+      option.textContent = `${p.name} — prints ${printsAt(p)}`;
       target.append(option);
     }
     target.value = find(chosen) ? chosen : "";
@@ -71,7 +83,8 @@
 
   const applyChoice = () => {
     const chosen = find(select.value);
-    scaleField.value = chosen ? String(chosen.factor) : "";
+    scaleX.value = chosen ? String(chosen.factorX) : "";
+    scaleY.value = chosen ? String(chosen.factorY) : "";
     removeButton.hidden = !chosen;
     write(CHOSEN, select.value);
   };
@@ -79,7 +92,7 @@
   fillPrinterOptions(select, read(CHOSEN) || "");
   applyChoice();
   // This runs at the target before htmx sees the event bubble to the form,
-  // so the preview request already carries the new factor.
+  // so the preview request already carries the new factors.
   select.addEventListener("change", applyChoice);
 
   removeButton.addEventListener("click", () => {
@@ -95,45 +108,62 @@
   const fields = calForm.elements;
   const toMm = (value, unit) => value * (unit === "cm" ? 10 : 1);
 
-  const parseMeasured = () => {
-    const raw = fields.measured.value.trim().replace(",", ".");
+  // null when empty, NaN when not a length, else millimetres.
+  const parseMeasured = (field) => {
+    const raw = field.value.trim().replace(",", ".");
     if (!raw) return null;
     const value = Number(raw);
     return Number.isFinite(value) && value > 0 ? toMm(value, fields.unit.value) : NaN;
   };
 
-  // The new factor stacks on the one the measured page was printed with, so
-  // a second round refines the first instead of throwing it away.
+  const outOfRange = (factor) => {
+    const equivalent = 100 / factor;
+    return equivalent < MIN_MEASURED || equivalent > MAX_MEASURED;
+  };
+
+  // The new factors stack on the ones the measured page was printed with,
+  // so a second round refines the first instead of throwing it away. An
+  // empty left ruler takes the bottom one's measurement.
   const proposed = () => {
-    const measured = parseMeasured();
-    if (measured === null || Number.isNaN(measured)) return { measured, factor: null };
+    const x = parseMeasured(fields.measured_x);
+    const y = parseMeasured(fields.measured_y) ?? x;
+    if (x === null || Number.isNaN(x) || Number.isNaN(y)) return { x, y, factors: null };
     const base = find(fields.base.value);
-    const factor = (base ? base.factor : 1) * (100 / measured);
-    return { measured, factor: Math.round(factor * 1e6) / 1e6 };
+    const round = (f) => Math.round(f * 1e6) / 1e6;
+    return {
+      x,
+      y,
+      factors: {
+        factorX: round((base ? base.factorX : 1) * (100 / x)),
+        factorY: round((base ? base.factorY : 1) * (100 / y)),
+      },
+    };
   };
 
   const describe = () => {
-    fields.measured.placeholder = fields.unit.value === "cm" ? "9.85" : "98.5";
+    const cm = fields.unit.value === "cm";
+    fields.measured_x.placeholder = cm ? "9.85" : "98.5";
     problem.textContent = "";
-    const { measured, factor } = proposed();
-    if (factor === null) {
-      result.textContent = "";
-      return;
-    }
-    const equivalent = 100 / factor;
-    if (equivalent < MIN_MEASURED || equivalent > MAX_MEASURED) {
-      result.textContent = "";
+    result.textContent = "";
+    const { x, y, factors } = proposed();
+    if (factors === null) return;
+    if (outOfRange(factors.factorX) || outOfRange(factors.factorY)) {
       problem.textContent =
-        `A ruler that measures ${measured.toFixed(1)} mm is off by more than a printer ` +
-        'scales. Check that the page printed at 100% / "Actual size" on the right paper.';
+        `A ruler that measures ${(outOfRange(factors.factorX) ? x : y).toFixed(1)} mm is ` +
+        "off by more than a printer scales. Check that the page printed at 100% / " +
+        '"Actual size" on the right paper.';
       return;
     }
+    const drawn =
+      factors.factorX === factors.factorY
+        ? `×${factors.factorX.toFixed(3)}`
+        : `×${factors.factorX.toFixed(3)} across and ×${factors.factorY.toFixed(3)} down`;
+    const came = x === y ? `${x.toFixed(1)} mm` : `${x.toFixed(1)} × ${y.toFixed(1)} mm`;
     result.textContent =
-      `The page will be drawn at ×${factor.toFixed(3)}, so what came out as ` +
-      `${measured.toFixed(1)} mm prints as 100 mm.`;
+      `The page will be drawn at ${drawn}, so what came out as ${came} prints as 100 mm.`;
   };
 
-  for (const name of ["measured", "unit", "base"]) {
+  for (const name of ["measured_x", "measured_y", "unit", "base"]) {
     fields[name].addEventListener("input", describe);
     fields[name].addEventListener("change", describe);
   }
@@ -142,7 +172,8 @@
     const chosen = find(select.value);
     fields.name.value = chosen ? chosen.name : "";
     fillPrinterOptions(fields.base, select.value);
-    fields.measured.value = "";
+    fields.measured_x.value = "";
+    fields.measured_y.value = "";
     fields.unit.value = form.elements.unit.value;
     describe();
     dialog.showModal();
@@ -155,24 +186,32 @@
   calForm.addEventListener("submit", (event) => {
     event.preventDefault();
     const name = fields.name.value.trim();
-    const { measured, factor } = proposed();
+    const { x, y, factors } = proposed();
     if (!name) {
       problem.textContent = "Give the printer a name.";
       fields.name.focus();
       return;
     }
-    if (factor === null) {
+    if (factors === null) {
+      const bottom = x === null || Number.isNaN(x);
       problem.textContent =
-        measured === null ? "Type what the ruler measured." : "That is not a length.";
-      fields.measured.focus();
+        x === null
+          ? "Type what the bottom ruler measured."
+          : `That is not a length for the ${bottom ? "bottom" : "left"} ruler.`;
+      (bottom ? fields.measured_x : fields.measured_y).focus();
       return;
     }
-    const equivalent = 100 / factor;
-    if (equivalent < MIN_MEASURED || equivalent > MAX_MEASURED) {
+    if (outOfRange(factors.factorX) || outOfRange(factors.factorY)) {
       describe();
       return;
     }
-    const entry = { name, factor, measured, savedAt: new Date().toISOString() };
+    const entry = {
+      name,
+      ...factors,
+      measuredX: x,
+      measuredY: y,
+      savedAt: new Date().toISOString(),
+    };
     const index = printers.findIndex((p) => p.name === name);
     if (index === -1) printers.push(entry);
     else printers[index] = entry;

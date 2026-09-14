@@ -44,7 +44,7 @@ def test_too_large_is_explained_in_the_typed_unit():
         data={"width": "30", "height": "17", "unit": "cm", "paper": "A4"},
     )
     assert "30 × 17 cm does not fit on A4 (21 × 29.7 cm)" in r.text
-    assert "19.4 × 26.1 cm" in r.text
+    assert "18 × 26.1 cm" in r.text
 
 
 def test_preview_without_an_image_explains():
@@ -84,7 +84,8 @@ def test_pdf_inline_for_printing():
 
 def test_index_has_the_calibration_and_the_help():
     r = client.get("/")
-    assert 'name="scale"' in r.text
+    assert 'name="scale_x"' in r.text
+    assert 'name="scale_y"' in r.text
     assert 'id="calibrate"' in r.text
     assert 'id="help-calibrate"' in r.text
     assert "/static/calibrate.js" in r.text
@@ -94,19 +95,37 @@ def test_preview_with_a_calibrated_printer_says_so():
     r = client.post(
         "/preview",
         files={"image": ("a.png", png_bytes(), "image/png")},
-        data={"width": "12", "unit": "cm", "scale": "1.020408", "printer": "HP LaserJet"},
+        data={
+            "width": "12",
+            "unit": "cm",
+            "scale_x": "1.020408",
+            "scale_y": "1.010101",
+            "printer": "HP LaserJet",
+        },
     )
     assert r.status_code == 200
     assert "12 × 17 cm" in r.text
-    assert "HP LaserJet: prints 98.0 mm per 100" in r.text
-    assert "drawn at ×1.020" in r.text
+    assert "HP LaserJet: prints" in r.text
+    assert "98.0 mm per 100 across and 99.0 down" in r.text
+    assert "drawn at ×1.020 across, ×1.010 down" in r.text
+
+
+def test_preview_with_one_factor_says_it_once():
+    r = client.post(
+        "/preview",
+        files={"image": ("a.png", png_bytes(), "image/png")},
+        data={"width": "12", "unit": "cm", "scale_x": "1.02", "scale_y": "1.02"},
+    )
+    assert "98.0 mm per 100," in r.text
+    assert "across" not in r.text.split("<dt>Printer</dt>")[1]
+    assert "drawn at ×1.020 to come out right" in r.text
 
 
 def test_preview_without_a_printer_has_no_printer_row():
     r = client.post(
         "/preview",
         files={"image": ("a.png", png_bytes(), "image/png")},
-        data={"width": "12", "unit": "cm", "scale": "", "printer": ""},
+        data={"width": "12", "unit": "cm", "scale_x": "", "scale_y": "", "printer": ""},
     )
     assert "<dt>Printer</dt>" not in r.text
 
@@ -115,13 +134,13 @@ def test_bad_calibration_is_explained():
     r = client.post(
         "/preview",
         files={"image": ("a.png", png_bytes(), "image/png")},
-        data={"width": "12", "unit": "cm", "scale": "1.5"},
+        data={"width": "12", "unit": "cm", "scale_x": "1", "scale_y": "1.5"},
     )
-    assert "the ruler measured 67 mm" in r.text
+    assert "×1.500 down means the ruler measured 67 mm" in r.text
     r = client.post(
         "/preview",
         files={"image": ("a.png", png_bytes(), "image/png")},
-        data={"width": "12", "unit": "cm", "scale": "abc"},
+        data={"width": "12", "unit": "cm", "scale_x": "abc"},
     )
     assert "is not a calibration factor." in r.text
 
@@ -130,7 +149,13 @@ def test_pdf_carries_the_printer_in_the_caption():
     r = client.post(
         "/pdf",
         files={"image": ("a.png", png_bytes(), "image/png")},
-        data={"width": "120", "height": "170", "scale": "1.020408", "printer": "HP LaserJet"},
+        data={
+            "width": "120",
+            "height": "170",
+            "scale_x": "1.020408",
+            "scale_y": "1.020408",
+            "printer": "HP LaserJet",
+        },
     )
     assert r.status_code == 200
-    assert b"Calibrated for HP LaserJet, drawn at \xd71.020" in r.content
+    assert b"Calibrated for HP LaserJet, drawn at \xd71.020)" in r.content
