@@ -19,6 +19,7 @@ def test_index_renders_the_form():
     assert r.status_code == 200
     assert 'hx-post="/preview"' in r.text
     assert 'action="/pdf"' in r.text
+    assert 'enctype="multipart/form-data"' in r.text
 
 
 def test_preview_returns_an_image_and_the_size():
