@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from PIL import Image, ImageOps, UnidentifiedImageError
 
-from .layout import MM_PER_UNIT, PAPERS, Layout, LayoutError, plan, to_mm
+from .layout import MM_PER_UNIT, PAPERS, DoesNotFit, Layout, LayoutError, plan, to_mm
 from .pdf import write_pdf
 from .preview import render_preview
 
@@ -75,6 +75,8 @@ def build(
     try:
         w, h = parse_length(width, unit), parse_length(height, unit)
         return plan(image.size, w, h, paper, orientation)
+    except DoesNotFit as e:
+        raise RequestError(e.message(unit)) from e
     except LayoutError as e:
         raise RequestError(str(e)) from e
 

@@ -37,6 +37,16 @@ def test_preview_without_a_size_explains():
     assert "Give a width, a height, or both." in r.text
 
 
+def test_too_large_is_explained_in_the_typed_unit():
+    r = client.post(
+        "/preview",
+        files={"image": ("a.png", png_bytes(), "image/png")},
+        data={"width": "30", "height": "17", "unit": "cm", "paper": "A4"},
+    )
+    assert "30 × 17 cm does not fit on A4 (21 × 29.7 cm)" in r.text
+    assert "19.4 × 26.5 cm" in r.text
+
+
 def test_preview_without_an_image_explains():
     r = client.post("/preview", data={"width": "100"})
     assert "Choose an image first." in r.text
