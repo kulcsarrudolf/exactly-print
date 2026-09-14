@@ -57,6 +57,14 @@ header h1 {
 header h1 a {
   color: inherit;
   text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+header h1 .mark {
+  color: var(--accent);
+  flex-shrink: 0;
 }
 
 header p,

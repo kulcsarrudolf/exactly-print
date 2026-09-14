@@ -1,1 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64"><title>Exactly Print</title><line x1="16" y1="8" x2="16" y2="56" stroke="#7a2a3a" stroke-width="6" stroke-linecap="round"/><line x1="16" y1="8" x2="50" y2="8" stroke="#7a2a3a" stroke-width="6" stroke-linecap="round"/><line x1="16" y1="20" x2="34" y2="20" stroke="#7a2a3a" stroke-width="6" stroke-linecap="round"/><line x1="16" y1="32" x2="50" y2="32" stroke="#7a2a3a" stroke-width="6" stroke-linecap="round"/><line x1="16" y1="44" x2="34" y2="44" stroke="#7a2a3a" stroke-width="6" stroke-linecap="round"/><line x1="16" y1="56" x2="50" y2="56" stroke="#7a2a3a" stroke-width="6" stroke-linecap="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- An E whose arms are ruler ticks, long and short, on a sheet of paper. -->
+  <rect width="64" height="64" rx="12" fill="#fafaf8"/>
+  <g stroke="#7a2a3a" stroke-width="6" stroke-linecap="round">
+    <path d="M16 8v48M16 8h34M16 20h18M16 32h34M16 44h18M16 56h34"/>
+  </g>
+</svg>
