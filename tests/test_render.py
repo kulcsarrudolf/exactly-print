@@ -1,4 +1,5 @@
 import re
+import zlib
 from io import BytesIO
 
 import pytest
@@ -35,6 +36,28 @@ def test_jpeg_travels_as_jpeg_and_png_as_flate():
     assert b"/FlateDecode" in write_pdf(layout, image)
     image.format = "JPEG"
     assert b"/DCTDecode" in write_pdf(layout, image)
+
+
+def test_png_travels_as_png_scanlines():
+    image = Image.effect_noise((64, 48), 40).convert("RGB")
+    layout = plan(image.size, 50, None)
+    pdf = write_pdf(layout, image)
+    m = re.search(
+        rb"/Predictor 15 /Colors 3 /BitsPerComponent 8 /Columns 64 >> /Length (\d+) >>\nstream\n",
+        pdf,
+    )
+    assert m
+    data = pdf[m.end() : m.end() + int(m.group(1))]
+
+    # Wrapped back into a PNG, the stream must give the very same pixels:
+    # that is what a reader's predictor does with it.
+    def chunk(kind: bytes, body: bytes) -> bytes:
+        crc = zlib.crc32(kind + body).to_bytes(4, "big")
+        return len(body).to_bytes(4, "big") + kind + body + crc
+
+    ihdr = (64).to_bytes(4, "big") + (48).to_bytes(4, "big") + bytes([8, 2, 0, 0, 0])
+    png = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", data) + chunk(b"IEND", b"")
+    assert Image.open(BytesIO(png)).convert("RGB").tobytes() == image.tobytes()
 
 
 def test_preview_is_the_page_at_four_pixels_per_mm():

@@ -4,7 +4,6 @@ Everything is placed in points converted from the layout's millimetres, so
 printing at 100% puts the trim box on paper at exactly the requested size.
 """
 
-import zlib
 from io import BytesIO
 
 from PIL import Image
@@ -30,17 +29,42 @@ def _text(x_mm: float, y_mm: float, size: float, s: str, center: bool = False) -
     return b"BT /F1 %.1f Tf %s %s Td (%s) Tj ET\n" % (size, x, y, esc)
 
 
+def _png_scanlines(image: Image.Image) -> bytes:
+    """The image's pixels deflated the way a PNG holds them: each row
+    prefixed with a filter byte and filtered against its neighbours.
+
+    That is exactly what a PDF reader undoes with `/Predictor 15`, and it
+    is what Pillow's PNG encoder writes into the IDAT chunks, so the PDF
+    comes out about the size of a PNG upload rather than of the raw pixels.
+    """
+    buf = BytesIO()
+    image.save(buf, "PNG")
+    png = buf.getvalue()
+    out = bytearray()
+    pos = 8  # past the signature
+    while pos < len(png):
+        length = int.from_bytes(png[pos : pos + 4], "big")
+        if png[pos + 4 : pos + 8] == b"IDAT":
+            out += png[pos + 8 : pos + 8 + length]
+        pos += 12 + length  # length, type, data, crc
+    return bytes(out)
+
+
 def _image_stream(image: Image.Image) -> tuple[bytes, bytes]:
     """The image object's dictionary entries and its encoded bytes.
 
     Photographs travel as JPEG so a 12-megapixel upload does not become a
-    40 MB PDF; everything else is losslessly deflated.
+    40 MB PDF; everything else is losslessly deflated with PNG predictors.
     """
     if image.format == "JPEG":
         buf = BytesIO()
         image.save(buf, "JPEG", quality=92, subsampling=0)
         return b"/Filter /DCTDecode", buf.getvalue()
-    return b"/Filter /FlateDecode", zlib.compress(image.tobytes(), 9)
+    params = (
+        f"/Filter /FlateDecode /DecodeParms << /Predictor 15 /Colors 3 "
+        f"/BitsPerComponent 8 /Columns {image.width} >>"
+    )
+    return params.encode(), _png_scanlines(image)
 
 
 def _content(layout: Layout, caption: str) -> bytes:

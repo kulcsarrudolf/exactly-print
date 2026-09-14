@@ -91,6 +91,7 @@ def test_index_has_the_calibration_and_links_to_the_help():
     assert 'href="/help#help-calibrate"' in r.text
     assert 'id="help-calibrate"' not in r.text
     assert "/static/calibrate.js" in r.text
+    assert "/static/shrink.js" in r.text
 
 
 def test_help_is_its_own_page():
