@@ -38,6 +38,33 @@ class LayoutError(ValueError):
     """The request cannot be laid out; the message is shown to the user."""
 
 
+@dataclass
+class DoesNotFit(LayoutError):
+    """The trim box is too large for the page. Sizes are in millimetres;
+    `message` says them in whatever unit the user typed."""
+
+    paper: str
+    trim_w: float
+    trim_h: float
+    page_w: float
+    page_h: float
+    max_w: float
+    max_h: float
+
+    def message(self, unit: str = "mm") -> str:
+        def s(mm: float) -> str:
+            return f"{mm / MM_PER_UNIT[unit]:.1f}".rstrip("0").rstrip(".")
+
+        return (
+            f"{s(self.trim_w)} × {s(self.trim_h)} {unit} does not fit on {self.paper} "
+            f"({s(self.page_w)} × {s(self.page_h)} {unit}). The largest that fits with "
+            f"the ruler and the bleed is {s(self.max_w)} × {s(self.max_h)} {unit}."
+        )
+
+    def __str__(self) -> str:
+        return self.message()
+
+
 @dataclass(frozen=True)
 class Box:
     x: float
@@ -139,12 +166,14 @@ def plan(
     trim_w, trim_h = target_size(image_px, width_mm, height_mm)
     page_w, page_h = _page(paper, orientation, trim_w, trim_h)
     if not _fits(page_w, page_h, trim_w, trim_h):
-        max_w = page_w - 2 * MARGIN - 2 * BLEED
-        max_h = page_h - MARGIN - RULER_BAND - 2 * BLEED
-        raise LayoutError(
-            f"{trim_w:.0f} × {trim_h:.0f} mm does not fit on {paper} "
-            f"({page_w:g} × {page_h:g} mm). The largest that fits with the ruler "
-            f"and the bleed is {max_w:.0f} × {max_h:.0f} mm."
+        raise DoesNotFit(
+            paper,
+            trim_w,
+            trim_h,
+            page_w,
+            page_h,
+            max_w=page_w - 2 * MARGIN - 2 * BLEED,
+            max_h=page_h - MARGIN - RULER_BAND - 2 * BLEED,
         )
 
     # Centre the trim box in the space above the ruler band.

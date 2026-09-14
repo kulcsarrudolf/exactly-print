@@ -1,6 +1,6 @@
 import pytest
 
-from exactly_print.layout import BLEED, LayoutError, plan, target_size, to_mm
+from exactly_print.layout import BLEED, DoesNotFit, LayoutError, plan, target_size, to_mm
 
 
 def test_missing_side_follows_aspect_ratio():
@@ -45,8 +45,16 @@ def test_invitation_on_a4():
 
 
 def test_too_large_is_refused_with_the_limit():
-    with pytest.raises(LayoutError, match="largest that fits"):
+    with pytest.raises(DoesNotFit) as info:
         plan((100, 100), 200, 200, "A4")
+    assert str(info.value) == (
+        "200 × 200 mm does not fit on A4 (210 × 297 mm). "
+        "The largest that fits with the ruler and the bleed is 194 × 265 mm."
+    )
+    assert info.value.message("cm") == (
+        "20 × 20 cm does not fit on A4 (21 × 29.7 cm). "
+        "The largest that fits with the ruler and the bleed is 19.4 × 26.5 cm."
+    )
 
 
 def test_auto_orientation_goes_landscape_only_when_portrait_cannot_hold_it():
