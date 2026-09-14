@@ -35,6 +35,8 @@ When the site is served behind a proxy or on a domain of its own, set `SITE_URL`
 
 The app runs as one Vercel Function: `[tool.vercel]` in `pyproject.toml` names `vercel_app.py` as the entrypoint, and Vercel installs the dependencies from `uv.lock`. Connect the repository at vercel.com, or run `npx vercel` in a checkout, then set `SITE_URL` in the project's environment variables. Vercel caps every request and response at 4.5 MB, so an image larger than that is rejected at the edge before it reaches the app.
 
+The pages load Vercel Web Analytics when they are served from Vercel (the platform sets `VERCEL=1`), so turning on Analytics for the project in the Vercel dashboard is all it takes to count visitors; elsewhere the script tag is left out.
+
 ## Use it
 
 1. Choose an image.
