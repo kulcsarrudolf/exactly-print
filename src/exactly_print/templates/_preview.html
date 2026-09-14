@@ -14,6 +14,13 @@
           {{ dpi }} dpi
           {% if layout.soft %}<span class="warn">— under 150 dpi, the print will look soft</span>{% endif %}
         </dd>
+        {% if printer or layout.scale != 1 %}
+          <dt>Printer</dt>
+          <dd>
+            {% if printer %}{{ printer }}: {% endif %}prints {{ prints_at }} mm per 100, so the
+            page is drawn at ×{{ "%.3f"|format(layout.scale) }} to come out right.
+          </dd>
+        {% endif %}
       </dl>
       <p class="hint">
         The red line is where you cut; the image runs 2 mm past it on every side so a slightly

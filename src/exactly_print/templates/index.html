@@ -6,11 +6,15 @@
     <title>Exactly Print</title>
     <link rel="stylesheet" href="/static/style.css" />
     <script src="/static/htmx.min.js" defer></script>
+    <script src="/static/calibrate.js" defer></script>
   </head>
   <body>
     <header>
-      <h1>Exactly Print</h1>
-      <p>Upload an image, pick a size, print it exactly that size.</p>
+      <div>
+        <h1>Exactly Print</h1>
+        <p>Upload an image, pick a size, print it exactly that size.</p>
+      </div>
+      <nav><a href="#help">Help</a></nav>
     </header>
 
     <main>
@@ -70,6 +74,24 @@
           </label>
         </fieldset>
 
+        <fieldset class="printer">
+          <legend>Printer</legend>
+          <label>
+            <span>Calibration</span>
+            <select name="printer" id="printer">
+              <option value="">None — print at 100%</option>
+            </select>
+          </label>
+          <input type="hidden" name="scale" value="" />
+          <button type="button" id="calibrate-open" class="secondary">Calibrate…</button>
+          <button type="button" id="printer-remove" class="quiet" hidden>Remove</button>
+          <p class="hint">
+            If the ruler on a print is not 100 mm, calibrate the printer once and pick it here;
+            the page is then drawn a little larger or smaller so it prints at the right size.
+            <a href="#help-calibrate">How it works.</a>
+          </p>
+        </fieldset>
+
         <div class="actions">
           <button type="submit" name="disposition" value="attachment">Download PDF</button>
           <button type="submit" name="disposition" value="inline" formtarget="_blank" class="secondary">
@@ -84,6 +106,120 @@
         <p class="placeholder">The preview appears here once you choose an image and a size.</p>
       </section>
     </main>
+
+    <dialog id="calibrate" aria-labelledby="calibrate-title">
+      <form id="calibrate-form" novalidate>
+        <h2 id="calibrate-title">Calibrate a printer</h2>
+        <p>
+          Print any page at 100% / "Actual size" and measure the ruler along the bottom with a
+          steel ruler, from the 0 to the 100 mark, as precisely as you can. Then say what you
+          got.
+        </p>
+        <label>
+          <span>Printer name</span>
+          <input type="text" name="name" required maxlength="60" placeholder="HP LaserJet, A4 tray" autocomplete="off" />
+        </label>
+        <label>
+          <span>The page was printed with</span>
+          <select name="base"></select>
+        </label>
+        <div class="measured">
+          <label>
+            <span>The ruler measured</span>
+            <input type="text" name="measured" inputmode="decimal" required placeholder="98.5" autocomplete="off" />
+          </label>
+          <label>
+            <span>Unit</span>
+            <select name="unit">
+              {% for u in units %}<option value="{{ u }}">{{ u }}</option>{% endfor %}
+            </select>
+          </label>
+        </div>
+        <p id="calibrate-result" class="hint" aria-live="polite"></p>
+        <p id="calibrate-error" class="error" aria-live="polite"></p>
+        <div class="actions">
+          <button type="submit">Save and use</button>
+          <button type="button" id="calibrate-cancel" class="secondary">Cancel</button>
+        </div>
+        <p class="hint">
+          Saved in this browser only, never on the server.
+          <a href="#help-calibrate" id="calibrate-help">Why does the printer do this?</a>
+        </p>
+      </form>
+    </dialog>
+
+    <section id="help" class="help">
+      <h2>Help</h2>
+
+      <h3 id="help-why">Why a print comes out the wrong size</h3>
+      <p>
+        The PDF says exactly how large everything is: a 120 mm wide image is 120 mm wide in the
+        file. Between the file and the paper, though, three things can change that.
+      </p>
+      <ul>
+        <li>
+          <strong>The print dialog scales the page.</strong> Browsers and PDF viewers often default
+          to "Fit to page", "Shrink to fit" or "Fit to printable area", which shrinks the whole
+          page by a few percent so nothing lands in the border the printer cannot reach. The same
+          happens when the paper picked in the dialog is not the paper the page was made for, say
+          Letter instead of A4. Choose <em>100%</em> or <em>"Actual size"</em>, and the paper size
+          the page names.
+        </li>
+        <li>
+          <strong>The printer driver has a scale of its own.</strong> Some drivers keep a "scale
+          to printable area" or a stored zoom, and apply it on top of whatever the dialog says.
+          It hides in the driver's own settings, not in the browser's.
+        </li>
+        <li>
+          <strong>The machine itself is not perfect.</strong> Paper is pulled through by rollers,
+          and half a percent of slip along the way is normal. Laser printers also heat the sheet,
+          which shrinks it a little. This part is small, but it is the same on every print from
+          that printer, which is exactly what a calibration can cancel.
+        </li>
+      </ul>
+
+      <h3 id="help-ruler">What the ruler tells you</h3>
+      <p>
+        Every page carries a 100 mm ruler. If it measures 100 mm on paper, the image is the size
+        you asked for. If it does not, first look for the scaling in the print dialog and the
+        driver; a ruler that is 5 mm or more off is almost always a setting. If every print from
+        the same printer is off by the same small amount, calibrate.
+      </p>
+
+      <h3 id="help-calibrate">Calibrating a printer</h3>
+      <ol>
+        <li>Under <em>Printer</em>, leave the calibration on <em>None</em> and print any page at 100%.</li>
+        <li>Measure the ruler from the 0 to the 100 mark. A tenth of a millimetre matters here.</li>
+        <li>
+          Click <em>Calibrate…</em>, name the printer, say that the page was printed with no
+          calibration, and type what the ruler measured.
+        </li>
+        <li>
+          From then on, with that printer chosen, the page is drawn 100 ÷ measured times its real
+          size. A printer that made the ruler 98 mm gets a page drawn at ×1.020, and its own
+          shrinking brings the ruler back to 100 mm. Print once more and measure to confirm.
+        </li>
+        <li>
+          If the ruler is still slightly off, calibrate again: under <em>The page was printed
+          with</em> choose the printer, and the new measurement is stacked on the old
+          correction instead of replacing it.
+        </li>
+      </ol>
+      <p>
+        One factor is applied in both directions. A printer that stretches the sheet along the
+        feed direction only cannot be corrected exactly, but the error that remains is the
+        difference between the two directions, which is far smaller than the whole. A
+        calibration also belongs to a printer <em>and</em> its settings: a different tray, paper
+        or driver may need one of its own, so name them.
+      </p>
+
+      <h3 id="help-storage">Where the settings live</h3>
+      <p>
+        Printers and their calibrations are kept in this browser's local storage on this device.
+        The server only ever receives the chosen factor and name along with each preview and
+        PDF, and keeps nothing. Clearing the site's data in the browser removes the printers.
+      </p>
+    </section>
 
     <footer>
       <p>

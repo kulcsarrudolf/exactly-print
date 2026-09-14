@@ -55,21 +55,25 @@ def _content(layout: Layout, caption: str) -> bytes:
     for x1, y1, x2, y2 in layout.marks:
         ops.append(f"{_n(x1)} {_n(y1)} m {_n(x2)} {_n(y2)} l S\n".encode())
 
+    # Every millimetre of the ruler is drawn `k` mm long, so the printer's
+    # scaling brings it back to a real millimetre.
+    k = layout.scale
     rx, ry = layout.ruler_x, layout.ruler_y
-    ops.append(f"{_n(rx)} {_n(ry)} m {_n(rx + RULER_LEN)} {_n(ry)} l S\n".encode())
+    ops.append(f"{_n(rx)} {_n(ry)} m {_n(rx + layout.ruler_len)} {_n(ry)} l S\n".encode())
     for mm in range(int(RULER_LEN) + 1):
-        tick = 5 if mm % 10 == 0 else 3 if mm % 5 == 0 else 1.5
-        ops.append(f"{_n(rx + mm)} {_n(ry)} m {_n(rx + mm)} {_n(ry + tick)} l S\n".encode())
+        tick = (5 if mm % 10 == 0 else 3 if mm % 5 == 0 else 1.5) * k
+        x = _n(rx + mm * k)
+        ops.append(f"{x} {_n(ry)} m {x} {_n(ry + tick)} l S\n".encode())
     ops.append(b"Q 0 g\n")
 
     for mm in range(0, int(RULER_LEN) + 1, 10):
-        ops.append(_text(rx + mm, ry + 6.5, 6, str(mm), center=True))
+        ops.append(_text(rx + mm * k, ry + 6.5 * k, 6, str(mm), center=True))
     # The settings first, then the notes; all of it stays above the 6 mm
     # margin a home printer cannot reach.
     cx = layout.page_w / 2
-    ops.append(_text(cx, ry - 4, 7, caption, center=True))
-    ops.append(_text(cx, ry - 7.5, 6, NOTE_RULER, center=True))
-    ops.append(_text(cx, ry - 11, 6, NOTE_PRINT, center=True))
+    ops.append(_text(cx, ry - 4 * k, 7, caption, center=True))
+    ops.append(_text(cx, ry - 7.5 * k, 6, NOTE_RULER, center=True))
+    ops.append(_text(cx, ry - 11 * k, 6, NOTE_PRINT, center=True))
     return b"".join(ops)
 
 
