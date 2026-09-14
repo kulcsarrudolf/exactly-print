@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Exactly Print{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    {% block scripts %}{% endblock %}
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1><a href="/">Exactly Print</a></h1>
+        <p>{% block tagline %}Upload an image, pick a size, print it exactly that size.{% endblock %}</p>
+      </div>
+      <nav>{% block nav %}{% endblock %}</nav>
+    </header>
+
+    {% block content %}{% endblock %}
+
+    <footer>
+      <p>Source code available on <a href="https://github.com/kulcsarrudolf/exactly-print">GitHub</a></p>
+      <p>
+        Created with <span class="heart" aria-label="love">&#9829;</span> by
+        <a href="https://kulcsarrudolf.com">Kulcsár Rudolf</a>
+      </p>
+    </footer>
+  </body>
+</html>

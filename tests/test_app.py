@@ -83,13 +83,22 @@ def test_pdf_inline_for_printing():
     assert r.headers["content-disposition"].startswith("inline;")
 
 
-def test_index_has_the_calibration_and_the_help():
+def test_index_has_the_calibration_and_links_to_the_help():
     r = client.get("/")
     assert 'name="scale_x"' in r.text
     assert 'name="scale_y"' in r.text
     assert 'id="calibrate"' in r.text
-    assert 'id="help-calibrate"' in r.text
+    assert 'href="/help#help-calibrate"' in r.text
+    assert 'id="help-calibrate"' not in r.text
     assert "/static/calibrate.js" in r.text
+
+
+def test_help_is_its_own_page():
+    r = client.get("/help")
+    assert r.status_code == 200
+    assert 'id="help-calibrate"' in r.text
+    assert 'id="setup"' not in r.text
+    assert 'href="/"' in r.text
 
 
 def test_preview_with_a_calibrated_printer_says_so():
