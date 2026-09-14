@@ -33,7 +33,7 @@ When the site is served behind a proxy or on a domain of its own, set `SITE_URL`
 
 ### Deploy to Vercel
 
-The app runs as one Vercel Function: `[tool.vercel]` in `pyproject.toml` names `vercel_app.py` as the entrypoint, and Vercel installs the dependencies from `uv.lock`. Connect the repository at vercel.com, or run `npx vercel` in a checkout, then set `SITE_URL` in the project's environment variables. Vercel caps every request and response at 4.5 MB, so an image larger than that is rejected at the edge before it reaches the app.
+The app runs as one Vercel Function: `[tool.vercel]` in `pyproject.toml` names `vercel_app.py` as the entrypoint, and Vercel installs the dependencies from `uv.lock`. Connect the repository at vercel.com, or run `npx vercel` in a checkout, then set `SITE_URL` in the project's environment variables. Vercel caps every request and response at 4.5 MB. To stay under it, the browser re-encodes any image over 3.5 MB as a JPEG before sending it (`static/shrink.js`), keeping enough pixels for A3 at 300 dpi, and the PDF stores other formats with PNG predictors so it comes out about the size of the upload.
 
 The pages load Vercel Web Analytics when they are served from Vercel (the platform sets `VERCEL=1`), so turning on Analytics for the project in the Vercel dashboard is all it takes to count visitors; elsewhere the script tag is left out.
 
@@ -71,7 +71,7 @@ src/exactly_print/
   preview.py    the page as a PNG
   seo.py        titles, descriptions, schema.org data, robots.txt, sitemap.xml
   templates/    index.html, help.html and the htmx partial
-  static/       stylesheet, the calibration script, a vendored htmx, icons
+  static/       stylesheet, the calibration and shrinking scripts, a vendored htmx, icons
 scripts/
   icons.py      redraws the icons and the link-preview image in static/
 vercel_app.py   the entrypoint Vercel loads; it puts src/ on the path
