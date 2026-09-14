@@ -257,6 +257,15 @@ def test_robots_sitemap_and_favicon_are_served():
         assert client.get(path).status_code == 200, path
 
 
+def test_analytics_only_on_vercel(monkeypatch):
+    tag = '<script defer src="/_vercel/insights/script.js"></script>'
+    monkeypatch.delenv("VERCEL", raising=False)
+    assert tag not in client.get("/").text
+    monkeypatch.setenv("VERCEL", "1")
+    for path in ("/", "/help"):
+        assert tag in client.get(path).text.split("</head>")[0]
+
+
 def test_the_api_docs_are_not_published():
     assert client.get("/docs").status_code == 404
     assert client.get("/openapi.json").status_code == 404

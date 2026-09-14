@@ -7,6 +7,7 @@ only for the length of a request.
 """
 
 import base64
+import os
 from io import BytesIO
 from pathlib import Path
 
@@ -29,6 +30,9 @@ app = FastAPI(title=seo.NAME, description=seo.TAGLINE, openapi_url=None)
 app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 templates = Jinja2Templates(directory=HERE / "templates")
 templates.env.globals["seo"] = seo
+# Vercel serves the analytics script itself at /_vercel/insights/, so the tag
+# only belongs on pages served from there; anywhere else it would 404.
+templates.env.globals["on_vercel"] = lambda: bool(os.environ.get("VERCEL"))
 
 Image.MAX_IMAGE_PIXELS = 80_000_000
 
