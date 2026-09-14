@@ -111,7 +111,7 @@ async def preview(
         layout = build(img, width, height, unit, paper, orientation)
     except RequestError as e:
         return templates.TemplateResponse(request, "_preview.html", {"error": str(e)})
-    png = render_preview(layout, img)
+    png = render_preview(layout, img, layout.describe(unit))
     return templates.TemplateResponse(
         request,
         "_preview.html",
@@ -144,7 +144,7 @@ async def pdf(
         layout = build(img, width, height, unit, paper, orientation)
     except RequestError as e:
         return index_page(request, str(e))
-    data = write_pdf(layout, img)
+    data = write_pdf(layout, img, layout.describe(unit))
     name = f"exactly-print-{layout.trim.w:.0f}x{layout.trim.h:.0f}mm-{layout.paper}.pdf"
     kind = "inline" if disposition == "inline" else "attachment"
     return Response(

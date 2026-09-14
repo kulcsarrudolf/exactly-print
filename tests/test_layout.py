@@ -49,12 +49,21 @@ def test_too_large_is_refused_with_the_limit():
         plan((100, 100), 200, 200, "A4")
     assert str(info.value) == (
         "200 × 200 mm does not fit on A4 (210 × 297 mm). "
-        "The largest that fits with the ruler and the bleed is 194 × 265 mm."
+        "The largest that fits with the ruler and the bleed is 194 × 261 mm."
     )
     assert info.value.message("cm") == (
         "20 × 20 cm does not fit on A4 (21 × 29.7 cm). "
-        "The largest that fits with the ruler and the bleed is 19.4 × 26.5 cm."
+        "The largest that fits with the ruler and the bleed is 19.4 × 26.1 cm."
     )
+
+
+def test_describe_says_the_settings_in_the_unit():
+    layout = plan((1488, 2078), 120, 170, "A4")
+    assert layout.describe() == (
+        "Image 120 × 170 mm  ·  Paper A4 portrait, 210 × 297 mm  ·  Bleed 2 mm  ·  303 dpi"
+    )
+    assert layout.describe("cm").startswith("Image 12 × 17 cm  ·  Paper A4 portrait, 21 × 29.7 cm")
+    assert plan((3000, 2000), 240, None, "A4").orientation == "landscape"
 
 
 def test_auto_orientation_goes_landscape_only_when_portrait_cannot_hold_it():

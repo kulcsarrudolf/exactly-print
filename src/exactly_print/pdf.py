@@ -43,7 +43,7 @@ def _image_stream(image: Image.Image) -> tuple[bytes, bytes]:
     return b"/Filter /FlateDecode", zlib.compress(image.tobytes(), 9)
 
 
-def _content(layout: Layout) -> bytes:
+def _content(layout: Layout, caption: str) -> bytes:
     ops: list[bytes] = []
     b, im = layout.bleed, layout.image
     ops.append(
@@ -64,19 +64,21 @@ def _content(layout: Layout) -> bytes:
 
     for mm in range(0, int(RULER_LEN) + 1, 10):
         ops.append(_text(rx + mm, ry + 6.5, 6, str(mm), center=True))
-    # Both notes stay above the 6 mm margin a home printer cannot reach.
+    # The settings first, then the notes; all of it stays above the 6 mm
+    # margin a home printer cannot reach.
     cx = layout.page_w / 2
-    ops.append(_text(cx, ry - 4, 7, NOTE_RULER, center=True))
-    ops.append(_text(cx, ry - 7.5, 6, f"{NOTE_PRINT}  Paper: {layout.paper}.", center=True))
+    ops.append(_text(cx, ry - 4, 7, caption, center=True))
+    ops.append(_text(cx, ry - 7.5, 6, NOTE_RULER, center=True))
+    ops.append(_text(cx, ry - 11, 6, NOTE_PRINT, center=True))
     return b"".join(ops)
 
 
-def write_pdf(layout: Layout, image: Image.Image) -> bytes:
+def write_pdf(layout: Layout, image: Image.Image, caption: str = "") -> bytes:
     if image.mode != "RGB":
         raise ValueError("write_pdf wants an RGB image")
     iw, ih = image.size
     img_filter, img_data = _image_stream(image)
-    content = _content(layout)
+    content = _content(layout, caption)
     t, b = layout.trim, layout.bleed
 
     def box(bx) -> str:
