@@ -22,6 +22,13 @@ def test_pdf_has_the_page_and_trim_box_in_points():
     assert (y1 - y0) / PT == pytest.approx(170, abs=0.001)
 
 
+def test_pdf_prints_the_caption_under_the_ruler():
+    image = Image.new("RGB", (600, 850))
+    layout = plan(image.size, 120, 170, "A4")
+    pdf = write_pdf(layout, image, layout.describe("cm"))
+    assert b"(Image 12 \xd7 17 cm" in pdf  # cp1252 multiplication sign
+
+
 def test_jpeg_travels_as_jpeg_and_png_as_flate():
     image = Image.new("RGB", (100, 100))
     layout = plan(image.size, 50, None)

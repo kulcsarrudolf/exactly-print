@@ -2,7 +2,7 @@
 
 from io import BytesIO
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 from .layout import RULER_LEN, Layout
 
@@ -12,7 +12,9 @@ INK = (40, 40, 40)
 GUIDE = (200, 120, 120)
 
 
-def render_preview(layout: Layout, image: Image.Image, px_per_mm: int = PX_PER_MM) -> bytes:
+def render_preview(
+    layout: Layout, image: Image.Image, caption: str = "", px_per_mm: int = PX_PER_MM
+) -> bytes:
     s = px_per_mm
     page_w, page_h = round(layout.page_w * s), round(layout.page_h * s)
 
@@ -47,6 +49,11 @@ def render_preview(layout: Layout, image: Image.Image, px_per_mm: int = PX_PER_M
         draw.line([pt(rx + mm, ry), pt(rx + mm, ry + tick)], fill=INK, width=1)
     for mm in range(0, int(RULER_LEN) + 1, 10):
         draw.text(pt(rx + mm, ry + 9), str(mm), fill=INK, anchor="mm")
+    if caption:
+        # Pillow's bundled font has no multiplication sign; the PDF keeps it.
+        font = ImageFont.load_default(size=3 * s)
+        text = caption.replace("×", "x")
+        draw.text(pt(layout.page_w / 2, ry - 5), text, fill=INK, anchor="mm", font=font)
 
     out = BytesIO()
     page.save(out, "PNG", optimize=True)

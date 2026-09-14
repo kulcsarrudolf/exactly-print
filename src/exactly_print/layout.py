@@ -23,10 +23,11 @@ BLEED = 2.0
 # reach it.
 MARGIN = 6.0
 # The strip along the bottom edge kept for the ruler and the notes.
-RULER_BAND = 22.0
+RULER_BAND = 26.0
 RULER_LEN = 100.0
-# The ruler's baseline; the notes hang below it, the numbers sit above.
-RULER_Y = 13.0
+# The ruler's baseline; the settings and the notes hang below it, the
+# numbers sit above.
+RULER_Y = 17.0
 # Crop marks start this far outside the trim corner and run this long.
 MARK_GAP = 3.0
 MARK_LEN = 7.0
@@ -108,6 +109,23 @@ class Layout:
     @property
     def soft(self) -> bool:
         return self.dpi < SOFT_DPI
+
+    @property
+    def orientation(self) -> str:
+        return "landscape" if self.page_w > self.page_h else "portrait"
+
+    def describe(self, unit: str = "mm") -> str:
+        """The settings in one line, printed under the ruler so a sheet
+        found in a drawer still says what it was made for."""
+
+        def s(mm: float) -> str:
+            return f"{mm / MM_PER_UNIT[unit]:.1f}".rstrip("0").rstrip(".")
+
+        return (
+            f"Image {s(self.trim.w)} × {s(self.trim.h)} {unit}  ·  "
+            f"Paper {self.paper} {self.orientation}, {s(self.page_w)} × {s(self.page_h)} {unit}"
+            f"  ·  Bleed {BLEED:g} mm  ·  {self.dpi:.0f} dpi"
+        )
 
 
 def to_mm(value: float | None, unit: str) -> float | None:

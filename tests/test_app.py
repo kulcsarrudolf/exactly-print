@@ -44,7 +44,7 @@ def test_too_large_is_explained_in_the_typed_unit():
         data={"width": "30", "height": "17", "unit": "cm", "paper": "A4"},
     )
     assert "30 × 17 cm does not fit on A4 (21 × 29.7 cm)" in r.text
-    assert "19.4 × 26.5 cm" in r.text
+    assert "19.4 × 26.1 cm" in r.text
 
 
 def test_preview_without_an_image_explains():
@@ -69,6 +69,7 @@ def test_pdf_download():
     assert r.headers["content-type"] == "application/pdf"
     expected = 'attachment; filename="exactly-print-120x170mm-A4.pdf"'
     assert r.headers["content-disposition"] == expected
+    assert b"(Image 120 \xd7 170 mm" in r.content
     assert r.content.startswith(b"%PDF")
 
 
