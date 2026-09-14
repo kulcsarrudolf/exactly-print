@@ -30,7 +30,7 @@ uv run uvicorn exactly_print.app:app --reload
 ## Use it
 
 1. Choose an image.
-2. Type a width, a height, or both, in mm or cm. With one side given, the other follows the image's proportions; with both, the image is scaled to cover the size and cropped evenly on the longer side.
+2. Type a width, a height, or both, in mm or cm. With one side given, the other is filled in from the image's proportions and marked *auto* until you type over it; with both, the image is scaled to cover the size and cropped evenly on the longer side.
 3. Pick the paper size. Orientation is automatic unless you set it.
 4. The preview updates as you type. The red line is where you cut.
 5. **Download PDF**, or **Open to print** and print from the browser.

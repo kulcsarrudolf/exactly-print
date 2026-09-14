@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/static/style.css" />
     <script src="/static/htmx.min.js" defer></script>
     <script src="/static/calibrate.js" defer></script>
+    <script src="/static/size.js" defer></script>
   </head>
   <body>
     <header>
@@ -36,12 +37,12 @@
         <fieldset class="size">
           <legend>Printed size</legend>
           <label>
-            <span>Width</span>
+            <span>Width <em class="auto-badge" hidden>auto</em></span>
             <input type="text" name="width" inputmode="decimal" placeholder="120" />
           </label>
           <span class="times">×</span>
           <label>
-            <span>Height</span>
+            <span>Height <em class="auto-badge" hidden>auto</em></span>
             <input type="text" name="height" inputmode="decimal" placeholder="170" />
           </label>
           <label>
@@ -51,8 +52,8 @@
             </select>
           </label>
           <p class="hint">
-            Leave one side empty to keep the image's proportions. Give both and the image is
-            scaled to cover the size and cropped evenly.
+            Type one side and the other follows the image's proportions. Type both and the
+            image is scaled to cover the size and cropped evenly.
           </p>
         </fieldset>
 
