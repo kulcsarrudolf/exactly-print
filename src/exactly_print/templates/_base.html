@@ -46,7 +46,14 @@
   <body>
     <header>
       <div>
-        <h1><a href="/">Exactly Print</a></h1>
+        <h1>
+          <a href="/">
+            <svg class="mark" viewBox="0 0 64 64" width="32" height="32" aria-hidden="true" focusable="false">
+              <path d="M16 8v48M16 8h34M16 20h18M16 32h34M16 44h18M16 56h34" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" />
+            </svg>
+            Exactly Print
+          </a>
+        </h1>
         <p>{% block tagline %}Upload an image, pick a size, print it exactly that size.{% endblock %}</p>
       </div>
       <nav aria-label="Site">{% block nav %}{% endblock %}</nav>

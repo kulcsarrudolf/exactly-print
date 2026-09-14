@@ -1,3 +1,5 @@
+<img src="branding/logo.svg" alt="Exactly Print" width="276" height="64">
+
 # Exactly Print
 
 Upload an image, pick a size, print it exactly that size.
