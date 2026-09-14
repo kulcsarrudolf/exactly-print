@@ -31,6 +31,10 @@ uv run uvicorn exactly_print.app:app --reload
 
 When the site is served behind a proxy or on a domain of its own, set `SITE_URL` to its public origin, for example `SITE_URL=https://print.example.com`. It is what the canonical links, the link-preview tags, `robots.txt` and `sitemap.xml` name; without it the app uses the address each request arrived at.
 
+### Deploy to Vercel
+
+The app runs as one Vercel Function: `[tool.vercel]` in `pyproject.toml` names `vercel_app.py` as the entrypoint, and Vercel installs the dependencies from `uv.lock`. Connect the repository at vercel.com, or run `npx vercel` in a checkout, then set `SITE_URL` in the project's environment variables. Vercel caps every request and response at 4.5 MB, so an image larger than that is rejected at the edge before it reaches the app.
+
 ## Use it
 
 1. Choose an image.
@@ -68,6 +72,7 @@ src/exactly_print/
   static/       stylesheet, the calibration script, a vendored htmx, icons
 scripts/
   icons.py      redraws the icons and the link-preview image in static/
+vercel_app.py   the entrypoint Vercel loads; it puts src/ on the path
 ```
 
 ## Develop
