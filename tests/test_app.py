@@ -169,3 +169,94 @@ def test_pdf_carries_the_printer_in_the_caption():
     )
     assert r.status_code == 200
     assert b"Calibrated for HP LaserJet, drawn at \xd71.020)" in r.content
+
+
+def test_pages_carry_the_tags_search_engines_and_link_previews_read():
+    for path in ("/", "/help"):
+        r = client.get(path)
+        assert r.status_code == 200
+        head = r.text.split("</head>")[0]
+        assert '<html lang="en"' in head
+        assert "<title>" in head and "Exactly Print" in head.split("</title>")[0]
+        assert '<meta name="description" content="' in head
+        assert f'<link rel="canonical" href="http://testserver{path}" />' in head
+        assert '<meta name="robots" content="index, follow' in head
+        assert f'<meta property="og:url" content="http://testserver{path}" />' in head
+        assert '<meta property="og:image" content="http://testserver/static/og.png" />' in head
+        assert '<meta name="twitter:card" content="summary_large_image" />' in head
+        assert '<link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />' in head
+        assert '<link rel="apple-touch-icon" href="/static/apple-touch-icon.png"' in head
+        assert '<link rel="manifest" href="/static/manifest.webmanifest" />' in head
+        assert 'type="application/ld+json"' in head
+
+
+def test_each_page_has_its_own_title_and_description():
+    home = client.get("/").text
+    help_ = client.get("/help").text
+    assert "<title>Exactly Print · Print an image at an exact size in mm or cm</title>" in home
+    assert "<title>Why a print comes out the wrong size, and how to fix it · Exactly Print" in help_
+    assert 'content="Upload an image, type its width or height in mm or cm' in home
+    assert 'content="Why a printed image comes out a few percent too small or large' in help_
+    assert '<meta property="og:type" content="website" />' in home
+    assert '<meta property="og:type" content="article" />' in help_
+
+
+def _structured_data(html: str) -> dict:
+    import json
+
+    start = html.index('<script type="application/ld+json">') + len(
+        '<script type="application/ld+json">'
+    )
+    return json.loads(html[start : html.index("</script>", start)])
+
+
+def test_structured_data_describes_the_app_and_the_help():
+    home = _structured_data(client.get("/").text)
+    types = {node["@type"] for node in home["@graph"]}
+    assert types == {"WebSite", "Person", "WebApplication", "WebPage"}
+    app_node = next(n for n in home["@graph"] if n["@type"] == "WebApplication")
+    assert app_node["url"] == "http://testserver/"
+    assert app_node["isAccessibleForFree"] is True
+    assert app_node["softwareHelp"]["url"] == "http://testserver/help"
+
+    help_ = _structured_data(client.get("/help").text)
+    types = {node["@type"] for node in help_["@graph"]}
+    assert {"HowTo", "FAQPage", "BreadcrumbList"} <= types
+    howto = next(n for n in help_["@graph"] if n["@type"] == "HowTo")
+    assert [s["position"] for s in howto["step"]] == [1, 2, 3, 4, 5]
+
+
+def test_site_url_can_be_configured_for_a_proxy(monkeypatch):
+    monkeypatch.setenv("SITE_URL", "https://exactly.example.com/")
+    r = client.get("/help")
+    assert '<link rel="canonical" href="https://exactly.example.com/help" />' in r.text
+    assert 'content="https://exactly.example.com/static/og.png"' in r.text
+    assert "Sitemap: https://exactly.example.com/sitemap.xml" in client.get("/robots.txt").text
+
+
+def test_robots_sitemap_and_favicon_are_served():
+    robots = client.get("/robots.txt")
+    assert robots.status_code == 200
+    assert robots.headers["content-type"].startswith("text/plain")
+    assert "Disallow: /preview" in robots.text
+    assert "Disallow: /pdf" in robots.text
+    assert "Sitemap: http://testserver/sitemap.xml" in robots.text
+
+    sitemap = client.get("/sitemap.xml")
+    assert sitemap.status_code == 200
+    assert sitemap.headers["content-type"].startswith("application/xml")
+    assert "<loc>http://testserver/</loc>" in sitemap.text
+    assert "<loc>http://testserver/help</loc>" in sitemap.text
+
+    favicon = client.get("/favicon.ico")
+    assert favicon.status_code == 200
+    assert favicon.headers["content-type"] == "image/x-icon"
+    assert favicon.content[:4] == b"\x00\x00\x01\x00"
+
+    for path in ("/static/og.png", "/static/favicon.svg", "/static/manifest.webmanifest"):
+        assert client.get(path).status_code == 200, path
+
+
+def test_the_api_docs_are_not_published():
+    assert client.get("/docs").status_code == 404
+    assert client.get("/openapi.json").status_code == 404

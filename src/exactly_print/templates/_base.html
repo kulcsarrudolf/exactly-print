@@ -1,11 +1,47 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" prefix="og: https://ogp.me/ns#">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{% block title %}Exactly Print{% endblock %}</title>
+    <title>{{ page.title }}</title>
+    <meta name="description" content="{{ page.description }}" />
+    <link rel="canonical" href="{{ page.url }}" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+    <meta name="author" content="{{ seo.AUTHOR }}" />
+    <meta name="application-name" content="Exactly Print" />
+    <meta name="apple-mobile-web-app-title" content="Exactly Print" />
+    <meta name="theme-color" content="{{ seo.THEME_COLOR }}" />
+    <meta name="color-scheme" content="light" />
+
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" sizes="180x180" />
+    <link rel="manifest" href="/static/manifest.webmanifest" />
+
+    <meta property="og:type" content="{{ page.og_type }}" />
+    <meta property="og:site_name" content="Exactly Print" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="{{ page.url }}" />
+    <meta property="og:title" content="{{ page.title }}" />
+    <meta property="og:description" content="{{ page.description }}" />
+    <meta property="og:image" content="{{ page.image }}" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="{{ seo.OG_IMAGE_SIZE[0] }}" />
+    <meta property="og:image:height" content="{{ seo.OG_IMAGE_SIZE[1] }}" />
+    <meta property="og:image:alt" content="{{ seo.OG_IMAGE_ALT }}" />
+    {% if page.og_type == "article" %}<meta property="article:author" content="{{ seo.AUTHOR_URL }}" />{% endif %}
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{{ page.title }}" />
+    <meta name="twitter:description" content="{{ page.description }}" />
+    <meta name="twitter:image" content="{{ page.image }}" />
+    <meta name="twitter:image:alt" content="{{ seo.OG_IMAGE_ALT }}" />
+
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+    <link rel="license" href="{{ seo.LICENSE_URL }}" />
     <link rel="stylesheet" href="/static/style.css" />
     {% block scripts %}{% endblock %}
+    <script type="application/ld+json">{{ structured_data | tojson }}</script>
   </head>
   <body>
     <header>
@@ -13,16 +49,16 @@
         <h1><a href="/">Exactly Print</a></h1>
         <p>{% block tagline %}Upload an image, pick a size, print it exactly that size.{% endblock %}</p>
       </div>
-      <nav>{% block nav %}{% endblock %}</nav>
+      <nav aria-label="Site">{% block nav %}{% endblock %}</nav>
     </header>
 
     {% block content %}{% endblock %}
 
     <footer>
-      <p>Source code available on <a href="https://github.com/kulcsarrudolf/exactly-print">GitHub</a></p>
+      <p>Source code available on <a href="https://github.com/kulcsarrudolf/exactly-print" rel="me">GitHub</a></p>
       <p>
         Created with <span class="heart" aria-label="love">&#9829;</span> by
-        <a href="https://kulcsarrudolf.com">Kulcsár Rudolf</a>
+        <a href="https://kulcsarrudolf.com" rel="author">Kulcsár Rudolf</a>
       </p>
     </footer>
   </body>

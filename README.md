@@ -27,6 +27,8 @@ uv sync
 uv run uvicorn exactly_print.app:app --reload
 ```
 
+When the site is served behind a proxy or on a domain of its own, set `SITE_URL` to its public origin, for example `SITE_URL=https://print.example.com`. It is what the canonical links, the link-preview tags, `robots.txt` and `sitemap.xml` name; without it the app uses the address each request arrived at.
+
 ## Use it
 
 1. Choose an image.
@@ -59,8 +61,11 @@ src/exactly_print/
   layout.py     paper sizes, units, where everything sits (pure, tested)
   pdf.py        the PDF writer
   preview.py    the page as a PNG
-  templates/    index.html and the htmx partial
-  static/       stylesheet, the calibration script and a vendored htmx
+  seo.py        titles, descriptions, schema.org data, robots.txt, sitemap.xml
+  templates/    index.html, help.html and the htmx partial
+  static/       stylesheet, the calibration script, a vendored htmx, icons
+scripts/
+  icons.py      redraws the icons and the link-preview image in static/
 ```
 
 ## Develop
