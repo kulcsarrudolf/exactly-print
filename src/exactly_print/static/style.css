@@ -140,9 +140,155 @@ label {
   color: var(--muted);
 }
 
-label.file {
-  color: var(--ink);
+.file {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.file-label {
   font-weight: 600;
+}
+
+.dropzone {
+  position: relative;
+  display: block;
+  padding: 22px 16px;
+  border: 1.5px dashed var(--line);
+  border-radius: 10px;
+  background: #fcfcfb;
+  color: var(--muted);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.dropzone:hover,
+.dropzone.dragging {
+  border-color: var(--accent);
+  background: #f6eef0;
+}
+
+.dropzone.dragging {
+  border-style: solid;
+}
+
+.dropzone:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Hidden from sight, but still focusable and still validated as required. */
+.dropzone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dropzone-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.dropzone-empty svg {
+  color: var(--accent);
+}
+
+.dropzone strong {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.dropzone-link {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.dropzone small {
+  font-size: 12px;
+}
+
+.dropzone-file {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+}
+
+.dropzone.has-file {
+  padding: 10px;
+  border-style: solid;
+}
+
+.dropzone.has-file .dropzone-empty {
+  display: none;
+}
+
+.dropzone.has-file .dropzone-file {
+  display: flex;
+}
+
+.dropzone-thumb {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.dropzone-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dropzone-wrap {
+  position: relative;
+}
+
+.dropzone.has-file {
+  padding-right: 56px;
+}
+
+.dropzone-remove {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 8px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.dropzone-remove:hover {
+  background: #fff;
+  border-color: var(--line);
+  color: var(--error);
+}
+
+.dropzone-remove:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.dropzone-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 input[type="text"],
