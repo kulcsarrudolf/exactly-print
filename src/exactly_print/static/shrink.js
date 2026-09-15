@@ -100,6 +100,8 @@
     queued = null;
     if (problem) {
       input.value = "";
+      // Not bubbling: dropzone.js and size.js hear it, htmx on the form does not.
+      input.dispatchEvent(new Event("change"));
       say(
         problem.message === "not an image"
           ? "That file is not an image the browser can read."
