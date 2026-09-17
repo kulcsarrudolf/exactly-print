@@ -1,4 +1,5 @@
-"""A one-page PDF written by hand: an image, crop marks, a ruler, three notes.
+"""A one-page PDF written by hand: an image, crop marks, and — unless they
+have been turned off — two rulers and the lines of text under them.
 
 Everything is placed in points converted from the layout's millimetres, so
 printing at 100% puts the trim box on paper at exactly the requested size.
@@ -83,26 +84,40 @@ def _content(layout: Layout, caption: str) -> bytes:
     # printer's scaling brings it back to a real millimetre.
     kx, ky = layout.scale_x, layout.scale_y
     rx, ry, sx = layout.ruler_x, layout.ruler_y, layout.side_ruler_x
-    ops.append(f"{_n(rx)} {_n(ry)} m {_n(rx + layout.ruler_len)} {_n(ry)} l S\n".encode())
-    ops.append(f"{_n(sx)} {_n(ry)} m {_n(sx)} {_n(ry + layout.side_ruler_len)} l S\n".encode())
-    for mm in range(int(RULER_LEN) + 1):
-        tick = 5 if mm % 10 == 0 else 3 if mm % 5 == 0 else 1.5
-        x = _n(rx + mm * kx)
-        ops.append(f"{x} {_n(ry)} m {x} {_n(ry + tick * ky)} l S\n".encode())
-        y = _n(ry + mm * ky)
-        ops.append(f"{_n(sx)} {y} m {_n(sx + tick * kx)} {y} l S\n".encode())
+    if layout.rulers:
+        ops.append(f"{_n(rx)} {_n(ry)} m {_n(rx + layout.ruler_len)} {_n(ry)} l S\n".encode())
+        ops.append(f"{_n(sx)} {_n(ry)} m {_n(sx)} {_n(ry + layout.side_ruler_len)} l S\n".encode())
+        for mm in range(int(RULER_LEN) + 1):
+            tick = 5 if mm % 10 == 0 else 3 if mm % 5 == 0 else 1.5
+            x = _n(rx + mm * kx)
+            ops.append(f"{x} {_n(ry)} m {x} {_n(ry + tick * ky)} l S\n".encode())
+            y = _n(ry + mm * ky)
+            ops.append(f"{_n(sx)} {y} m {_n(sx + tick * kx)} {y} l S\n".encode())
     ops.append(b"Q 0 g\n")
 
-    for mm in range(0, int(RULER_LEN) + 1, 10):
-        ops.append(_text(rx + mm * kx, ry + 6.5 * ky, 6, str(mm), center=True))
-        ops.append(_text(sx + 8 * kx, ry + mm * ky - 1 * ky, 6, str(mm), center=True))
-    # The settings first, then the notes; all of it stays above the 6 mm
-    # margin a home printer cannot reach.
+    if layout.rulers:
+        for mm in range(0, int(RULER_LEN) + 1, 10):
+            ops.append(_text(rx + mm * kx, ry + 6.5 * ky, 6, str(mm), center=True))
+            ops.append(_text(sx + 8 * kx, ry + mm * ky - 1 * ky, 6, str(mm), center=True))
+
+    # The settings first, then the notes, each a step lower; all of it stays
+    # above the 6 mm margin a home printer cannot reach. The note about the
+    # rulers goes with them.
     cx = layout.page_w / 2
-    ops.append(_text(cx, ry - 4 * ky, 7, caption, center=True))
-    ops.append(_text(cx, ry - 7.5 * ky, 6, NOTE_RULER, center=True))
-    ops.append(_text(cx, ry - 11 * ky, 6, NOTE_PRINT, center=True))
+    for i, (size, text) in enumerate(_lines(layout, caption)):
+        ops.append(_text(cx, layout.caption_y - i * layout.note_step, size, text, center=True))
     return b"".join(ops)
+
+
+def _lines(layout: Layout, caption: str) -> list[tuple[float, str]]:
+    """What is written under the image, in the order it is printed."""
+    if not layout.notes:
+        return []
+    lines = [(7.0, caption)] if caption else []
+    if layout.rulers:
+        lines.append((6.0, NOTE_RULER))
+    lines.append((6.0, NOTE_PRINT))
+    return lines
 
 
 def write_pdf(layout: Layout, image: Image.Image, caption: str = "") -> bytes:

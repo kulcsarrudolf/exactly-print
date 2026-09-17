@@ -81,6 +81,14 @@ def parse_length(raw: str, unit: str) -> float | None:
         raise RequestError(f"'{raw}' is not a number.") from e
 
 
+def checkbox(values: list[str]) -> bool:
+    """One of the checkboxes on the form. A box that is off sends nothing,
+    so the page puts a hidden 0 of the same name in front of each one and
+    the last value wins. A request without the field at all — an older form,
+    a post by hand — gets the page as it has always been drawn."""
+    return values[-1] != "0" if values else True
+
+
 def parse_scale(raw: str) -> float:
     """One of the printer's calibration factors, sent by the browser from the
     printer the user picked; an empty field means an uncalibrated printer."""
@@ -102,13 +110,15 @@ def build(
     orientation: str,
     scale_x: str = "",
     scale_y: str = "",
+    rulers: bool = True,
+    notes: bool = True,
 ) -> Layout:
     if unit not in MM_PER_UNIT:
         raise RequestError("Pick mm or cm.")
     try:
         w, h = parse_length(width, unit), parse_length(height, unit)
         kx, ky = parse_scale(scale_x), parse_scale(scale_y)
-        return plan(image.size, w, h, paper, orientation, kx, ky)
+        return plan(image.size, w, h, paper, orientation, kx, ky, rulers, notes)
     except DoesNotFit as e:
         raise RequestError(e.message(unit)) from e
     except Incomplete as e:
@@ -174,10 +184,23 @@ async def preview(
     scale_x: str = Form(""),
     scale_y: str = Form(""),
     printer: str = Form(""),
+    rulers: list[str] = Form([]),
+    notes: list[str] = Form([]),
 ):
     try:
         img = await read_image(image)
-        layout = build(img, width, height, unit, paper, orientation, scale_x, scale_y)
+        layout = build(
+            img,
+            width,
+            height,
+            unit,
+            paper,
+            orientation,
+            scale_x,
+            scale_y,
+            checkbox(rulers),
+            checkbox(notes),
+        )
     except RequestError as e:
         return templates.TemplateResponse(
             request, "_preview.html", {"error": str(e), "waiting": e.waiting}
@@ -216,11 +239,24 @@ async def pdf(
     scale_x: str = Form(""),
     scale_y: str = Form(""),
     printer: str = Form(""),
+    rulers: list[str] = Form([]),
+    notes: list[str] = Form([]),
     disposition: str = Form("attachment"),
 ):
     try:
         img = await read_image(image)
-        layout = build(img, width, height, unit, paper, orientation, scale_x, scale_y)
+        layout = build(
+            img,
+            width,
+            height,
+            unit,
+            paper,
+            orientation,
+            scale_x,
+            scale_y,
+            checkbox(rulers),
+            checkbox(notes),
+        )
     except RequestError as e:
         return index_page(request, str(e))
     data = write_pdf(layout, img, layout.describe(unit, printer.strip()))
