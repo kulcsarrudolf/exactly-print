@@ -123,7 +123,37 @@
       </form>
 
       <section id="preview" aria-live="polite">
-        <p class="placeholder">The preview appears here once you choose an image and a size.</p>
+        <div class="empty">
+          <svg class="empty-art" viewBox="0 0 220 280" width="220" height="280" aria-hidden="true" focusable="false">
+            <rect class="sheet" x="10" y="8" width="200" height="264" rx="3" />
+            <g clip-path="url(#empty-bleed)">
+              <rect class="sky" x="52" y="36" width="116" height="140" />
+              <circle class="sun" cx="140" cy="68" r="13" />
+              <path class="hill-far" d="M52 176V132l34-30 38 34 44-32v72Z" />
+              <path class="hill-near" d="M52 176v-22l30-22 34 26 30-16 22 16v18Z" />
+            </g>
+            <clipPath id="empty-bleed"><rect x="52" y="36" width="116" height="140" /></clipPath>
+            <rect class="cut" x="56" y="40" width="108" height="132" />
+            <path class="marks" d="M38 40h12M56 22v12M170 40h12M164 22v12M38 172h12M56 178v12M170 172h12M164 178v12" />
+            <path class="ruler" d="M56 236h100M28 236V136" />
+            <path class="ruler" d="M56 236v-7M61 236v-4M66 236v-7M71 236v-4M76 236v-7M81 236v-4M86 236v-7M91 236v-4M96 236v-7M101 236v-4M106 236v-7M111 236v-4M116 236v-7M121 236v-4M126 236v-7M131 236v-4M136 236v-7M141 236v-4M146 236v-7M151 236v-4M156 236v-7" />
+            <path class="ruler" d="M28 236h7M28 231h4M28 226h7M28 221h4M28 216h7M28 211h4M28 206h7M28 201h4M28 196h7M28 191h4M28 186h7M28 181h4M28 176h7M28 171h4M28 166h7M28 161h4M28 156h7M28 151h4M28 146h7M28 141h4M28 136h7" />
+            <text class="tick-label" x="56" y="250" text-anchor="middle">0</text>
+            <text class="tick-label" x="156" y="250" text-anchor="middle">100 mm</text>
+          </svg>
+          <h2>The page, before you print it</h2>
+          <p>
+            Choose an image and say how large it should come out. The preview shows the whole
+            sheet: the image at that size in real millimetres, the line to cut along, and the
+            rulers that tell you whether the printer kept to the scale.
+          </p>
+          <ol class="empty-steps">
+            <li><span><strong>Choose an image</strong> — click the field, drop a file on it, or paste one.</span></li>
+            <li><span><strong>Type a width or a height</strong> in mm or cm; the other side follows the image.</span></li>
+            <li><span><strong>Print at 100%</strong>, measure a ruler, cut along the red line.</span></li>
+          </ol>
+          <p class="empty-note">Nothing is stored — the image is held only for as long as the request takes.</p>
+        </div>
       </section>
     </main>
 
