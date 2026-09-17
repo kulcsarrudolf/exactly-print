@@ -117,8 +117,36 @@ fieldset.paper {
   grid-template-columns: 1fr 1fr;
 }
 
+fieldset.extras {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
 fieldset.printer {
   grid-template-columns: 1fr auto auto;
+}
+
+label.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+  color: var(--ink);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+label.check input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+label.check input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 fieldset.printer button {

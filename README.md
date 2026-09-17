@@ -12,6 +12,8 @@ Printing an image at a real-world size is harder than it should be: the print di
 - two 100 mm rulers, one along the bottom and one up the left edge, so a test print tells you whether the printer scaled the page, and by how much in each direction;
 - a per-printer calibration, so a printer that always comes out a little small or large can be corrected once and forgotten.
 
+The rulers and the lines of text under the image can be left off for a clean sheet; the image is then given the strips they sat in, so it can be printed larger on the same paper.
+
 Nothing is stored: the browser sends the image with every preview and every download, and the server holds it only for the length of the request.
 
 ## Run it
@@ -42,9 +44,10 @@ The pages load Vercel Web Analytics when they are served from Vercel (the platfo
 1. Choose an image.
 2. Type a width, a height, or both, in mm or cm. With one side given, the other is filled in from the image's proportions and marked *auto* until you type over it; with both, the image is scaled to cover the size and cropped evenly on the longer side.
 3. Pick the paper size. Orientation is automatic unless you set it.
-4. The preview updates as you type. The red line is where you cut.
-5. **Download PDF**, or **Open to print** and print from the browser.
-6. Print at **100% / "Actual size"** on the paper size the page names. Never "Fit to page". Measure the rulers on the first print: if both are 100 mm, the image is the size you asked for.
+4. Under **On the page**, keep the rulers and the notes unless you want nothing on the sheet but the image and its crop marks. Without them the image has their strips of the sheet, so it can be printed larger.
+5. The preview updates as you type. The red line is where you cut.
+6. **Download PDF**, or **Open to print** and print from the browser.
+7. Print at **100% / "Actual size"** on the paper size the page names. Never "Fit to page". Measure the rulers on the first print: if both are 100 mm, the image is the size you asked for.
 
 ## Calibrate a printer
 

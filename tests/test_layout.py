@@ -152,3 +152,27 @@ def test_describe_names_the_printer_in_real_millimetres():
     assert plan((1488, 2078), 120, 170, "A4").describe("mm", "").endswith("dpi")
     same = plan((1488, 2078), 120, 170, "A4", scale_x=0.99, scale_y=0.99)
     assert same.describe().endswith("Calibrated, drawn at ×0.990")
+
+
+def test_dropping_the_rulers_gives_their_strips_to_the_image():
+    """The side and bottom bands are only there for what is printed in them."""
+    with pytest.raises(DoesNotFit):
+        plan((1000, 1000), 190, 190, "A4", "portrait")
+    layout = plan((1000, 1000), 190, 190, "A4", "portrait", rulers=False, notes=False)
+    assert layout.trim.w == 190
+    # Centred in what is left of the sheet once the margins are taken.
+    assert layout.trim.x == pytest.approx((210 - 190) / 2)
+    assert layout.trim.y == pytest.approx((297 - 190) / 2)
+
+
+def test_the_notes_keep_a_strip_of_their_own_without_the_rulers():
+    quiet = plan((1000, 1000), 190, None, "A4", "portrait", rulers=False, notes=False)
+    noted = plan((1000, 1000), 190, None, "A4", "portrait", rulers=False, notes=True)
+    assert noted.trim.y > quiet.trim.y
+    assert noted.trim.y == pytest.approx(13 + (297 - 13 - MARGIN - 190) / 2)
+
+
+def test_without_the_rulers_the_largest_that_fits_says_so():
+    with pytest.raises(DoesNotFit) as info:
+        plan((1000, 1000), 260, None, "A4", "portrait", rulers=False, notes=False)
+    assert "The largest that fits with the bleed is 194 × 281 mm." in str(info.value)

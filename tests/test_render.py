@@ -101,3 +101,30 @@ def test_calibrated_preview_is_still_the_real_sheet():
     layout = plan(image.size, 120, 170, "A4", scale_x=1.02, scale_y=1.01)
     preview = Image.open(BytesIO(render_preview(layout, image, layout.describe("mm", "HP"))))
     assert preview.size == (840, 1188)
+
+
+def test_a_plain_page_is_only_the_image_and_its_crop_marks():
+    image = Image.new("RGB", (600, 850))
+    layout = plan(image.size, 120, 170, "A4", rulers=False, notes=False)
+    pdf = write_pdf(layout, image, layout.describe("mm"))
+    assert b"Both rulers must measure" not in pdf
+    assert b"Actual size" not in pdf
+    assert b"(Image 120" not in pdf
+    # Two lines at each of the four trim corners, and nothing else drawn.
+    assert pdf.count(b" l S\n") == 8
+
+
+def test_the_ruler_note_goes_with_the_rulers():
+    image = Image.new("RGB", (600, 850))
+    layout = plan(image.size, 120, 170, "A4", rulers=False)
+    pdf = write_pdf(layout, image, layout.describe("mm"))
+    assert b"(Image 120" in pdf
+    assert b"Actual size" in pdf
+    assert b"Both rulers must measure" not in pdf
+
+
+def test_the_preview_draws_a_plain_page_too():
+    image = Image.new("RGB", (600, 850), (200, 100, 100))
+    layout = plan(image.size, 120, 170, "A4", rulers=False, notes=False)
+    png = render_preview(layout, image, layout.describe("mm"), px_per_mm=2)
+    assert Image.open(BytesIO(png)).size == (420, 594)

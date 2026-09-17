@@ -285,3 +285,29 @@ def test_analytics_only_on_vercel(monkeypatch):
 def test_the_api_docs_are_not_published():
     assert client.get("/docs").status_code == 404
     assert client.get("/openapi.json").status_code == 404
+
+
+def test_the_checkboxes_reach_the_page():
+    """Off sends the hidden 0 the form puts before each box; a request with
+    no word on it at all gets the page as it has always been drawn."""
+    plain = client.post(
+        "/pdf",
+        files={"image": ("a.png", png_bytes(), "image/png")},
+        data={"width": "120", "rulers": ["0"], "notes": ["0"]},
+    )
+    assert b"Both rulers must measure" not in plain.content
+    assert b"(Image 120" not in plain.content
+
+    checked = client.post(
+        "/pdf",
+        files={"image": ("a.png", png_bytes(), "image/png")},
+        data={"width": "120", "rulers": ["0", "1"], "notes": ["0", "1"]},
+    )
+    assert b"Both rulers must measure" in checked.content
+
+    quiet = client.post(
+        "/preview",
+        files={"image": ("a.png", png_bytes(), "image/png")},
+        data={"width": "190", "rulers": ["0"], "notes": ["0"]},
+    )
+    assert "data:image/png;base64," in quiet.text

@@ -89,6 +89,27 @@
           </label>
         </fieldset>
 
+        <fieldset class="extras">
+          <legend>On the page</legend>
+          {# A box that is off sends nothing, so a hidden 0 goes before it. #}
+          <label class="check">
+            <input type="hidden" name="rulers" value="0" />
+            <input type="checkbox" name="rulers" value="1" checked />
+            <span>Rulers to check the scale</span>
+          </label>
+          <label class="check">
+            <input type="hidden" name="notes" value="0" />
+            <input type="checkbox" name="notes" value="1" checked />
+            <span>Settings and reminders under the image</span>
+          </label>
+          <p class="hint">
+            The rulers are the two 100 mm lines that tell you whether the printer kept to the
+            scale; under them the sheet says what it was made for and how to print it. Leave
+            them off for a clean sheet — the image then has the strips they sit in, so it can
+            be printed larger on the same paper.
+          </p>
+        </fieldset>
+
         <fieldset class="printer">
           <legend>Printer</legend>
           <label>
@@ -116,8 +137,9 @@
           <span id="busy" class="busy" aria-hidden="true">Rendering…</span>
         </div>
         <p class="hint">
-          Every page carries a 100 mm ruler. Print at 100% / "Actual size", never "Fit to page",
-          then check the ruler before you cut. Nothing you upload is stored.
+          Print at 100% / "Actual size", never "Fit to page". With the rulers on the page,
+          measure one before you cut: 100 mm means the print is the size you asked for.
+          Nothing you upload is stored.
         </p>
         {% if error %}<p class="error">{{ error }}</p>{% endif %}
       </form>

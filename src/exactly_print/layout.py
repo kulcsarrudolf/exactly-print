@@ -24,6 +24,8 @@ BLEED = 2.0
 MARGIN = 6.0
 # The strip along the bottom edge kept for the ruler and the notes.
 RULER_BAND = 26.0
+# Without the rulers only the lines of text need a strip of their own.
+NOTES_BAND = 13.0
 # The strip along the left edge kept for the vertical ruler: its numbers
 # and the crop marks of the image must not run into each other.
 SIDE_BAND = 20.0
@@ -31,6 +33,11 @@ RULER_LEN = 100.0
 # The bottom ruler's baseline; the settings and the notes hang below it,
 # the numbers sit above. The left ruler starts on the same line.
 RULER_Y = 17.0
+# The settings line's baseline and the step down to each note under it.
+# They sit under the ruler when there is one and take the bottom of the
+# sheet when there is not, so they never move.
+CAPTION_Y = 13.0
+NOTE_STEP = 3.5
 # The left ruler's line; its ticks and numbers sit to the right of it.
 RULER_X = 7.0
 # Crop marks start this far outside the trim corner and run this long.
@@ -66,15 +73,17 @@ class DoesNotFit(LayoutError):
     page_h: float
     max_w: float
     max_h: float
+    rulers: bool = True
 
     def message(self, unit: str = "mm") -> str:
         def s(mm: float) -> str:
             return f"{mm / MM_PER_UNIT[unit]:.1f}".rstrip("0").rstrip(".")
 
+        keeping = "the rulers and the bleed" if self.rulers else "the bleed"
         return (
             f"{s(self.trim_w)} × {s(self.trim_h)} {unit} does not fit on {self.paper} "
             f"({s(self.page_w)} × {s(self.page_h)} {unit}). The largest that fits with "
-            f"the rulers and the bleed is {s(self.max_w)} × {s(self.max_h)} {unit}."
+            f"{keeping} is {s(self.max_w)} × {s(self.max_h)} {unit}."
         )
 
     def __str__(self) -> str:
@@ -123,6 +132,20 @@ class Layout:
     dpi: float
     scale_x: float = 1.0
     scale_y: float = 1.0
+    # What is printed beside the image itself. With the rulers off the strips
+    # they sit in are given back to the image, so the same paper takes a
+    # larger print; the crop marks and the bleed are always drawn.
+    rulers: bool = True
+    notes: bool = True
+
+    @property
+    def caption_y(self) -> float:
+        """The settings line's baseline; each note steps down from it."""
+        return CAPTION_Y * self.scale_y
+
+    @property
+    def note_step(self) -> float:
+        return NOTE_STEP * self.scale_y
 
     @property
     def ruler_len(self) -> float:
@@ -207,8 +230,24 @@ def target_size(
     return width_mm, height_mm
 
 
+def _bands(rulers: bool, notes: bool) -> tuple[float, float]:
+    """The strips along the left and the bottom edge that the image stays
+    out of. Only the rulers need the side band; the bottom one shrinks to
+    what is printed in it, down to the margin when nothing is."""
+    side = SIDE_BAND if rulers else MARGIN
+    if rulers:
+        return side, RULER_BAND
+    return side, NOTES_BAND if notes else MARGIN
+
+
 def _page(
-    paper: str, orientation: str, trim_w: float, trim_h: float, kx: float = 1.0, ky: float = 1.0
+    paper: str,
+    orientation: str,
+    trim_w: float,
+    trim_h: float,
+    kx: float = 1.0,
+    ky: float = 1.0,
+    bands: tuple[float, float] = (SIDE_BAND, RULER_BAND),
 ) -> tuple[float, float]:
     if paper not in PAPERS:
         raise LayoutError(f"Unknown paper size: {paper}")
@@ -221,17 +260,24 @@ def _page(
         raise LayoutError(f"Unknown orientation: {orientation}")
     # Auto: portrait, the way paper sits in the tray, unless only landscape
     # fits. The print is cut out anyway, so its own orientation does not matter.
-    if _fits(short / kx, long / ky, trim_w, trim_h) or not _fits(
-        long / kx, short / ky, trim_w, trim_h
+    if _fits(short / kx, long / ky, trim_w, trim_h, bands) or not _fits(
+        long / kx, short / ky, trim_w, trim_h, bands
     ):
         return short, long
     return long, short
 
 
-def _fits(page_w: float, page_h: float, trim_w: float, trim_h: float) -> bool:
+def _fits(
+    page_w: float,
+    page_h: float,
+    trim_w: float,
+    trim_h: float,
+    bands: tuple[float, float] = (SIDE_BAND, RULER_BAND),
+) -> bool:
+    side, bottom = bands
     return (
-        trim_w + 2 * BLEED <= page_w - SIDE_BAND - MARGIN
-        and trim_h + 2 * BLEED <= page_h - MARGIN - RULER_BAND
+        trim_w + 2 * BLEED <= page_w - side - MARGIN
+        and trim_h + 2 * BLEED <= page_h - MARGIN - bottom
     )
 
 
@@ -252,6 +298,8 @@ def plan(
     orientation: str = "auto",
     scale_x: float = 1.0,
     scale_y: float = 1.0,
+    rulers: bool = True,
+    notes: bool = True,
 ) -> Layout:
     """Lay the image out on the paper.
 
@@ -259,30 +307,37 @@ def plan(
     bottom ruler came out at 98 mm gets 100 / 98 across, and everything is
     drawn that much wider about the centre of the page so it comes off the
     printer at its real size. The left ruler does the same for the height.
+
+    `rulers` and `notes` say what is printed beside the image. Dropping them
+    gives their strips of the sheet back to the image, so a print that does
+    not fit with the rulers may fit without them.
     """
     _check_scale(scale_x, "across")
     _check_scale(scale_y, "down")
     trim_w, trim_h = target_size(image_px, width_mm, height_mm)
-    page_w, page_h = _page(paper, orientation, trim_w, trim_h, scale_x, scale_y)
+    bands = _bands(rulers, notes)
+    side, bottom = bands
+    page_w, page_h = _page(paper, orientation, trim_w, trim_h, scale_x, scale_y, bands)
     # Lay the page out in printed millimetres on the sheet as the printer
     # will shrink or stretch it, then scale the drawing to the real sheet.
     sheet_w, sheet_h = page_w / scale_x, page_h / scale_y
-    if not _fits(sheet_w, sheet_h, trim_w, trim_h):
+    if not _fits(sheet_w, sheet_h, trim_w, trim_h, bands):
         raise DoesNotFit(
             paper,
             trim_w,
             trim_h,
             page_w,
             page_h,
-            max_w=sheet_w - SIDE_BAND - MARGIN - 2 * BLEED,
-            max_h=sheet_h - MARGIN - RULER_BAND - 2 * BLEED,
+            max_w=sheet_w - side - MARGIN - 2 * BLEED,
+            max_h=sheet_h - MARGIN - bottom - 2 * BLEED,
+            rulers=rulers,
         )
 
     # Centre the trim box in the space right of the side band and above
-    # the ruler band.
+    # the bottom one.
     trim = Box(
-        SIDE_BAND + (sheet_w - SIDE_BAND - MARGIN - trim_w) / 2,
-        RULER_BAND + (sheet_h - RULER_BAND - MARGIN - trim_h) / 2,
+        side + (sheet_w - side - MARGIN - trim_w) / 2,
+        bottom + (sheet_h - bottom - MARGIN - trim_h) / 2,
         trim_w,
         trim_h,
     )
@@ -308,4 +363,6 @@ def plan(
         dpi=iw / (draw_w / 25.4),
         scale_x=scale_x,
         scale_y=scale_y,
+        rulers=rulers,
+        notes=notes,
     )
