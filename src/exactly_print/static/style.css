@@ -513,6 +513,134 @@ dialog .hint:empty {
   margin: 0;
 }
 
+/* The panel is as tall as the form beside it; centre the empty state in it. */
+#preview:has(.empty) {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  max-width: 44ch;
+  padding: 8px 0;
+  text-align: center;
+}
+
+.empty-art {
+  width: min(220px, 55%);
+  height: auto;
+}
+
+.empty-art .sheet {
+  fill: #fff;
+  stroke: var(--line);
+  stroke-width: 1.5;
+}
+
+.empty-art .sky,
+.empty-art .sun,
+.empty-art .hill-far,
+.empty-art .hill-near {
+  fill: var(--accent);
+}
+
+.empty-art .sky {
+  opacity: 0.07;
+}
+
+.empty-art .sun {
+  opacity: 0.22;
+}
+
+.empty-art .hill-far {
+  opacity: 0.16;
+}
+
+.empty-art .hill-near {
+  opacity: 0.28;
+}
+
+/* The same red the preview draws the trim line in. */
+.empty-art .cut {
+  fill: none;
+  stroke: #c87878;
+  stroke-width: 1.4;
+}
+
+.empty-art .marks,
+.empty-art .ruler {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.1;
+  opacity: 0.55;
+}
+
+.empty-art .tick-label {
+  fill: var(--muted);
+  font: 500 10px/1 system-ui, sans-serif;
+}
+
+.empty h2 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+
+.empty p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.empty-steps {
+  counter-reset: step;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+  text-align: left;
+}
+
+.empty-steps li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.empty-steps li::before {
+  counter-increment: step;
+  content: counter(step);
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #f6eef0;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.empty-steps strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.empty-note {
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+  align-self: stretch;
+  font-size: 13px;
+}
+
 figure {
   margin: 0;
   display: flex;
