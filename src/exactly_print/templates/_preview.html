@@ -1,5 +1,13 @@
 {% if error %}
-  <p class="error">{{ error }}</p>
+  {# A field that is not filled in yet asks; anything else reports. #}
+  <p class="{{ "prompt" if waiting else "error" }}">{{ error }}</p>
+  <p class="notice-hint">
+    {% if waiting %}
+      The preview is drawn as soon as there is enough to draw it from.
+    {% else %}
+      Change it above and the preview is drawn again.
+    {% endif %}
+  </p>
 {% else %}
   <figure>
     <img src="data:image/png;base64,{{ png }}" alt="Preview of the printed page" />

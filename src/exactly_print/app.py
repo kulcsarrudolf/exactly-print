@@ -18,7 +18,7 @@ from fastapi.templating import Jinja2Templates
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from . import seo
-from .layout import MM_PER_UNIT, PAPERS, DoesNotFit, Layout, LayoutError, plan, to_mm
+from .layout import MM_PER_UNIT, PAPERS, DoesNotFit, Incomplete, Layout, LayoutError, plan, to_mm
 from .pdf import write_pdf
 from .preview import render_preview
 
@@ -38,12 +38,18 @@ Image.MAX_IMAGE_PIXELS = 80_000_000
 
 
 class RequestError(ValueError):
-    """A problem with the upload, worded for the user."""
+    """A problem with the request, worded for the user. `waiting` marks the
+    ones that are only a field not filled in yet, so the preview can ask for
+    it instead of reporting a mistake."""
+
+    def __init__(self, message: str, *, waiting: bool = False) -> None:
+        super().__init__(message)
+        self.waiting = waiting
 
 
 async def read_image(upload: UploadFile | None) -> Image.Image:
     if upload is None or not upload.filename:
-        raise RequestError("Choose an image first.")
+        raise RequestError("Choose an image first.", waiting=True)
     data = await upload.read()
     if len(data) > MAX_UPLOAD:
         raise RequestError("The image is larger than 25 MB.")
@@ -105,6 +111,8 @@ def build(
         return plan(image.size, w, h, paper, orientation, kx, ky)
     except DoesNotFit as e:
         raise RequestError(e.message(unit)) from e
+    except Incomplete as e:
+        raise RequestError(str(e), waiting=True) from e
     except LayoutError as e:
         raise RequestError(str(e)) from e
 
@@ -171,7 +179,9 @@ async def preview(
         img = await read_image(image)
         layout = build(img, width, height, unit, paper, orientation, scale_x, scale_y)
     except RequestError as e:
-        return templates.TemplateResponse(request, "_preview.html", {"error": str(e)})
+        return templates.TemplateResponse(
+            request, "_preview.html", {"error": str(e), "waiting": e.waiting}
+        )
     printer = printer.strip()
     png = render_preview(layout, img, layout.describe(unit, printer))
     return templates.TemplateResponse(

@@ -49,6 +49,11 @@ class LayoutError(ValueError):
     """The request cannot be laid out; the message is shown to the user."""
 
 
+class Incomplete(LayoutError):
+    """Nothing is wrong yet: a field the layout needs is still empty. Worth
+    telling apart from a mistake, so the page can ask rather than complain."""
+
+
 @dataclass
 class DoesNotFit(LayoutError):
     """The trim box is too large for the page. Sizes are in millimetres;
@@ -192,7 +197,7 @@ def target_size(
     """The trim size. A missing side follows the image's aspect ratio."""
     iw, ih = image_px
     if width_mm is None and height_mm is None:
-        raise LayoutError("Give a width, a height, or both.")
+        raise Incomplete("Give a width, a height, or both.")
     if (width_mm is not None and width_mm <= 0) or (height_mm is not None and height_mm <= 0):
         raise LayoutError("The size has to be larger than zero.")
     if width_mm is None:

@@ -53,6 +53,21 @@ def test_preview_without_an_image_explains():
     assert "Choose an image first." in r.text
 
 
+def test_an_empty_field_asks_and_a_mistake_reports():
+    """An empty field is not an error, and the preview says so differently."""
+    asked = client.post("/preview", files={"image": ("a.png", png_bytes(), "image/png")})
+    assert 'class="prompt"' in asked.text
+    assert 'class="error"' not in asked.text
+
+    wrong = client.post(
+        "/preview",
+        files={"image": ("a.png", png_bytes(), "image/png")},
+        data={"width": "30", "unit": "cm", "paper": "A4"},
+    )
+    assert 'class="error"' in wrong.text
+    assert 'class="prompt"' not in wrong.text
+
+
 def test_preview_with_a_non_image_explains():
     r = client.post(
         "/preview", files={"image": ("a.txt", b"hello", "text/plain")}, data={"width": "10"}
