@@ -4,6 +4,7 @@ from io import BytesIO
 
 from PIL import Image, ImageDraw, ImageFont
 
+from . import qr
 from .layout import RULER_LEN, Layout
 
 PX_PER_MM = 4
@@ -12,8 +13,26 @@ INK = (40, 40, 40)
 GUIDE = (200, 120, 120)
 
 
+def _qr_code(layout: Layout, link: str, s: int) -> Image.Image | None:
+    """The QR code as an image the size of the layout's square. It is drawn
+    a module to a pixel and blown up without smoothing, so the preview shows
+    the same squares the PDF does, only coarser."""
+    box = layout.qr
+    if box is None or not link:
+        return None
+    modules = qr.encode(link)
+    n = len(modules)
+    code = Image.new("RGB", (n, n))
+    code.putdata([INK if cell else PAPER for row in modules for cell in row])
+    return code.resize((max(1, round(box.w * s)), max(1, round(box.h * s))), Image.NEAREST)
+
+
 def render_preview(
-    layout: Layout, image: Image.Image, caption: str = "", px_per_mm: int = PX_PER_MM
+    layout: Layout,
+    image: Image.Image,
+    caption: str = "",
+    link: str = "",
+    px_per_mm: int = PX_PER_MM,
 ) -> bytes:
     s = px_per_mm
     page_w, page_h = round(layout.page_w * s), round(layout.page_h * s)
@@ -54,6 +73,11 @@ def render_preview(
         for mm in range(0, int(RULER_LEN) + 1, 10):
             draw.text(pt(rx + mm * kx, ry + 9 * ky), str(mm), fill=INK, anchor="mm")
             draw.text(pt(sx + 9 * kx, ry + mm * ky), str(mm), fill=INK, anchor="mm")
+
+    code = _qr_code(layout, link, s)
+    if code is not None:
+        page.paste(code, pt(layout.qr.x, layout.qr.top))
+
     if caption and layout.notes:
         # Pillow's bundled font has no multiplication sign; the PDF keeps it.
         font = ImageFont.load_default(size=3 * s)

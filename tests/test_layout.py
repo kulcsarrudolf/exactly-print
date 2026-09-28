@@ -3,7 +3,11 @@ import pytest
 from exactly_print.layout import (
     BLEED,
     MARGIN,
+    NOTES_BAND,
+    QR_BAND,
+    QR_SIZE,
     SIDE_BAND,
+    Box,
     DoesNotFit,
     LayoutError,
     plan,
@@ -59,11 +63,11 @@ def test_too_large_is_refused_with_the_limit():
         plan((100, 100), 200, 200, "A4")
     assert str(info.value) == (
         "200 × 200 mm does not fit on A4 (210 × 297 mm). "
-        "The largest that fits with the rulers and the bleed is 180 × 261 mm."
+        "The largest that fits with the rulers and the bleed is 180 × 249 mm."
     )
     assert info.value.message("cm") == (
         "20 × 20 cm does not fit on A4 (21 × 29.7 cm). "
-        "The largest that fits with the rulers and the bleed is 18 × 26.1 cm."
+        "The largest that fits with the rulers and the bleed is 18 × 24.9 cm."
     )
 
 
@@ -131,7 +135,7 @@ def test_calibration_leaves_less_room_on_the_sheet():
     with pytest.raises(DoesNotFit) as info:
         plan((100, 100), 180, 100, "A4", "portrait", scale_x=1.05, scale_y=1.05)
     assert "does not fit on A4 (210 × 297 mm)" in str(info.value)
-    assert "170 × 246.9 mm" in str(info.value)
+    assert "170 × 234.9 mm" in str(info.value)
 
 
 def test_calibration_out_of_range_is_a_setting_not_a_printer():
@@ -165,14 +169,39 @@ def test_dropping_the_rulers_gives_their_strips_to_the_image():
     assert layout.trim.y == pytest.approx((297 - 190) / 2)
 
 
-def test_the_notes_keep_a_strip_of_their_own_without_the_rulers():
+def test_the_notes_keep_strips_of_their_own_without_the_rulers():
+    """The lines of text take a strip along the bottom and the QR code one
+    along the top; without them the image has both."""
     quiet = plan((1000, 1000), 190, None, "A4", "portrait", rulers=False, notes=False)
     noted = plan((1000, 1000), 190, None, "A4", "portrait", rulers=False, notes=True)
-    assert noted.trim.y > quiet.trim.y
-    assert noted.trim.y == pytest.approx(13 + (297 - 13 - MARGIN - 190) / 2)
+    assert quiet.trim.y == pytest.approx(MARGIN + (297 - 2 * MARGIN - 190) / 2)
+    assert noted.trim.y == pytest.approx(NOTES_BAND + (297 - NOTES_BAND - QR_BAND - 190) / 2)
 
 
 def test_without_the_rulers_the_largest_that_fits_says_so():
     with pytest.raises(DoesNotFit) as info:
         plan((1000, 1000), 260, None, "A4", "portrait", rulers=False, notes=False)
     assert "The largest that fits with the bleed is 194 × 281 mm." in str(info.value)
+
+
+def test_the_qr_code_sits_in_the_top_right_corner():
+    layout = plan((1488, 2078), 120, 170, "A4")
+    assert layout.qr == Box(210 - MARGIN - QR_SIZE, 297 - MARGIN - QR_SIZE, QR_SIZE, QR_SIZE)
+    # The image keeps clear of it: the top band is wider than the code, so
+    # the paper between them is the quiet zone a scanner needs.
+    assert layout.qr.y - layout.bleed.top >= QR_BAND - QR_SIZE
+
+
+def test_a_clean_sheet_has_no_qr_code_and_gets_its_strip():
+    plain = plan((1000, 1000), 190, None, "A4", "portrait", rulers=False, notes=False)
+    assert plain.qr is None
+    assert plain.bleed.top > plan((1000, 1000), 190, None, "A4", "portrait", rulers=False).bleed.top
+
+
+def test_the_calibrated_qr_code_is_drawn_to_come_out_square():
+    layout = plan((1488, 2078), 120, 170, "A4", scale_x=1.02, scale_y=1.01)
+    assert layout.qr.w == pytest.approx(QR_SIZE * 1.02)
+    assert layout.qr.h == pytest.approx(QR_SIZE * 1.01)
+    # Still tucked into the top right corner of the real sheet.
+    assert layout.qr.right == pytest.approx(210 - MARGIN * 1.02)
+    assert layout.qr.top == pytest.approx(297 - MARGIN * 1.01)

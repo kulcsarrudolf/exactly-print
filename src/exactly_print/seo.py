@@ -16,6 +16,10 @@ TAGLINE = "Upload an image, pick a size, print it exactly that size."
 AUTHOR = "Kulcsár Rudolf"
 AUTHOR_URL = "https://kulcsarrudolf.com"
 REPOSITORY = "https://github.com/kulcsarrudolf/exactly-print"
+# Where the site is published. `site_url` is what a request is answered with;
+# this is what the printed sheet points back to, because the address a request
+# arrived at — localhost, a preview deployment — is no use on paper.
+HOME = "https://exactly-print.puncto.live/"
 LICENSE_URL = "https://opensource.org/license/mit"
 THEME_COLOR = "#fafaf8"
 OG_IMAGE = "/static/og.png"
@@ -31,6 +35,7 @@ FEATURES = [
     "2 mm bleed past the cut line and crop marks in the four corners",
     "Two 100 mm rulers to check whether the printer scaled the page",
     "Per-printer calibration, across and down separately",
+    "A QR code in the corner leading back to the page the sheet was made on",
     "A4, A3, A5 and Letter, portrait or landscape",
     "PDF download or open to print straight from the browser",
     "Nothing uploaded is stored",

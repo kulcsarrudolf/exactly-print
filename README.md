@@ -10,9 +10,10 @@ Printing an image at a real-world size is harder than it should be: the print di
 - a 2 mm bleed past the cut line, so a slightly imprecise cut still shows image, not paper;
 - crop marks in the four corners;
 - two 100 mm rulers, one along the bottom and one up the left edge, so a test print tells you whether the printer scaled the page, and by how much in each direction;
+- a QR code in the top right corner, so a sheet found later leads back to the page it was made on;
 - a per-printer calibration, so a printer that always comes out a little small or large can be corrected once and forgotten.
 
-The rulers and the lines of text under the image can be left off for a clean sheet; the image is then given the strips they sat in, so it can be printed larger on the same paper.
+The rulers, the lines of text under the image and the QR code can be left off for a clean sheet; the image is then given the strips they sat in, so it can be printed larger on the same paper.
 
 Nothing is stored: the browser sends the image with every preview and every download, and the server holds it only for the length of the request.
 
@@ -64,6 +65,7 @@ From then on, with that printer chosen, the whole page is drawn 100 ÷ measured 
 - [FastAPI](https://fastapi.tiangolo.com/) serves one page, an [htmx](https://htmx.org/) preview partial and the PDF.
 - [Pillow](https://python-imaging.github.io/) reads the upload and draws the preview.
 - The PDF is written by hand in `pdf.py`: one page, one image, a few lines and a bit of Helvetica. JPEG uploads travel inside the PDF as JPEG; everything else is deflated losslessly.
+- The QR code is encoded by hand too, in `qr.py`: byte mode, error correction level M, versions 1 to 3. It is drawn as filled rectangles in the PDF, so it stays sharp at any print resolution. The address it points to is `HOME` in `seo.py`, not the address a request arrived at — localhost is no use on paper.
 - `layout.py` is the single source of the geometry. The PDF and the preview both draw from it, so they cannot disagree.
 
 ```
@@ -72,6 +74,7 @@ src/exactly_print/
   layout.py     paper sizes, units, where everything sits (pure, tested)
   pdf.py        the PDF writer
   preview.py    the page as a PNG
+  qr.py         the QR code encoder (pure, tested)
   seo.py        titles, descriptions, schema.org data, robots.txt, sitemap.xml
   templates/    index.html, help.html and the htmx partial
   static/       stylesheet, the calibration and shrinking scripts, a vendored htmx, icons

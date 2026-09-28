@@ -1,5 +1,5 @@
 """A one-page PDF written by hand: an image, crop marks, and — unless they
-have been turned off — two rulers and the lines of text under them.
+have been turned off — two rulers, a QR code and the lines of text under them.
 
 Everything is placed in points converted from the layout's millimetres, so
 printing at 100% puts the trim box on paper at exactly the requested size.
@@ -9,6 +9,7 @@ from io import BytesIO
 
 from PIL import Image
 
+from . import qr
 from .layout import RULER_LEN, Layout
 
 PT = 72 / 25.4  # points per millimetre
@@ -68,7 +69,37 @@ def _image_stream(image: Image.Image) -> tuple[bytes, bytes]:
     return params.encode(), _png_scanlines(image)
 
 
-def _content(layout: Layout, caption: str) -> bytes:
+def _qr_code(layout: Layout, link: str) -> bytes:
+    """The QR code as filled rectangles, one per run of dark modules.
+
+    The code is drawn in the layout's square, which a calibrated printer
+    stretches back to a square of QR_SIZE. Nothing is drawn around it: the
+    quiet zone is the paper the top band keeps clear.
+    """
+    box = layout.qr
+    if box is None or not link:
+        return b""
+    modules = qr.encode(link)
+    n = len(modules)
+    mw, mh = box.w / n, box.h / n
+    ops = [b"q 0 g\n"]
+    for row, cells in enumerate(modules):
+        # Top row first, and y grows upwards, so row 0 sits at the top.
+        y = box.top - (row + 1) * mh
+        start = None
+        for col in range(n + 1):
+            dark = col < n and cells[col]
+            if dark and start is None:
+                start = col
+            elif not dark and start is not None:
+                x, w = box.x + start * mw, (col - start) * mw
+                ops.append(f"{_n(x)} {_n(y)} {_n(w)} {_n(mh)} re\n".encode())
+                start = None
+    ops.append(b"f Q\n")
+    return b"".join(ops)
+
+
+def _content(layout: Layout, caption: str, link: str) -> bytes:
     ops: list[bytes] = []
     b, im = layout.bleed, layout.image
     ops.append(
@@ -106,6 +137,7 @@ def _content(layout: Layout, caption: str) -> bytes:
     cx = layout.page_w / 2
     for i, (size, text) in enumerate(_lines(layout, caption)):
         ops.append(_text(cx, layout.caption_y - i * layout.note_step, size, text, center=True))
+    ops.append(_qr_code(layout, link))
     return b"".join(ops)
 
 
@@ -120,12 +152,12 @@ def _lines(layout: Layout, caption: str) -> list[tuple[float, str]]:
     return lines
 
 
-def write_pdf(layout: Layout, image: Image.Image, caption: str = "") -> bytes:
+def write_pdf(layout: Layout, image: Image.Image, caption: str = "", link: str = "") -> bytes:
     if image.mode != "RGB":
         raise ValueError("write_pdf wants an RGB image")
     iw, ih = image.size
     img_filter, img_data = _image_stream(image)
-    content = _content(layout, caption)
+    content = _content(layout, caption, link)
     t, b = layout.trim, layout.bleed
 
     def box(bx) -> str:

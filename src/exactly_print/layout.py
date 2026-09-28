@@ -29,6 +29,11 @@ NOTES_BAND = 13.0
 # The strip along the left edge kept for the vertical ruler: its numbers
 # and the crop marks of the image must not run into each other.
 SIDE_BAND = 20.0
+# The QR code in the top right corner, and the strip along the top edge kept
+# for it. The strip is the wider of the two, so the paper left between the
+# code and the image is the quiet zone a scanner needs around it.
+QR_SIZE = 14.0
+QR_BAND = 18.0
 RULER_LEN = 100.0
 # The bottom ruler's baseline; the settings and the notes hang below it,
 # the numbers sit above. The left ruler starts on the same line.
@@ -137,6 +142,9 @@ class Layout:
     # larger print; the crop marks and the bleed are always drawn.
     rulers: bool = True
     notes: bool = True
+    # The square the QR code is drawn in, in the top right corner, or None
+    # when the notes are off and the sheet keeps nothing but the image.
+    qr: Box | None = None
 
     @property
     def caption_y(self) -> float:
@@ -230,14 +238,16 @@ def target_size(
     return width_mm, height_mm
 
 
-def _bands(rulers: bool, notes: bool) -> tuple[float, float]:
-    """The strips along the left and the bottom edge that the image stays
-    out of. Only the rulers need the side band; the bottom one shrinks to
-    what is printed in it, down to the margin when nothing is."""
+def _bands(rulers: bool, notes: bool) -> tuple[float, float, float]:
+    """The strips along the left, the bottom and the top edge that the image
+    stays out of. Only the rulers need the side band; the other two shrink to
+    what is printed in them, down to the margin when nothing is. The QR code
+    goes with the notes, so the top band comes and goes with them."""
     side = SIDE_BAND if rulers else MARGIN
+    top = QR_BAND if notes else MARGIN
     if rulers:
-        return side, RULER_BAND
-    return side, NOTES_BAND if notes else MARGIN
+        return side, RULER_BAND, top
+    return side, NOTES_BAND if notes else MARGIN, top
 
 
 def _page(
@@ -247,7 +257,7 @@ def _page(
     trim_h: float,
     kx: float = 1.0,
     ky: float = 1.0,
-    bands: tuple[float, float] = (SIDE_BAND, RULER_BAND),
+    bands: tuple[float, float, float] = (SIDE_BAND, RULER_BAND, QR_BAND),
 ) -> tuple[float, float]:
     if paper not in PAPERS:
         raise LayoutError(f"Unknown paper size: {paper}")
@@ -272,12 +282,11 @@ def _fits(
     page_h: float,
     trim_w: float,
     trim_h: float,
-    bands: tuple[float, float] = (SIDE_BAND, RULER_BAND),
+    bands: tuple[float, float, float] = (SIDE_BAND, RULER_BAND, QR_BAND),
 ) -> bool:
-    side, bottom = bands
+    side, bottom, top = bands
     return (
-        trim_w + 2 * BLEED <= page_w - side - MARGIN
-        and trim_h + 2 * BLEED <= page_h - MARGIN - bottom
+        trim_w + 2 * BLEED <= page_w - side - MARGIN and trim_h + 2 * BLEED <= page_h - top - bottom
     )
 
 
@@ -316,7 +325,7 @@ def plan(
     _check_scale(scale_y, "down")
     trim_w, trim_h = target_size(image_px, width_mm, height_mm)
     bands = _bands(rulers, notes)
-    side, bottom = bands
+    side, bottom, top = bands
     page_w, page_h = _page(paper, orientation, trim_w, trim_h, scale_x, scale_y, bands)
     # Lay the page out in printed millimetres on the sheet as the printer
     # will shrink or stretch it, then scale the drawing to the real sheet.
@@ -329,15 +338,15 @@ def plan(
             page_w,
             page_h,
             max_w=sheet_w - side - MARGIN - 2 * BLEED,
-            max_h=sheet_h - MARGIN - bottom - 2 * BLEED,
+            max_h=sheet_h - top - bottom - 2 * BLEED,
             rulers=rulers,
         )
 
-    # Centre the trim box in the space right of the side band and above
-    # the bottom one.
+    # Centre the trim box in the space right of the side band and between
+    # the bottom band and the top one.
     trim = Box(
         side + (sheet_w - side - MARGIN - trim_w) / 2,
-        bottom + (sheet_h - bottom - MARGIN - trim_h) / 2,
+        bottom + (sheet_h - bottom - top - trim_h) / 2,
         trim_w,
         trim_h,
     )
@@ -349,6 +358,17 @@ def plan(
     fit = max(bleed.w / iw, bleed.h / ih)
     draw_w, draw_h = iw * fit, ih * fit
     image = Box(bleed.x + (bleed.w - draw_w) / 2, bleed.y + (bleed.h - draw_h) / 2, draw_w, draw_h)
+
+    # The QR code sits in the top right corner of the printed sheet, inside
+    # the margin, and is drawn scaled like everything else so a calibrated
+    # printer puts a square code of QR_SIZE on the paper.
+    qr = (
+        Box(sheet_w - MARGIN - QR_SIZE, sheet_h - MARGIN - QR_SIZE, QR_SIZE, QR_SIZE).scaled(
+            scale_x, scale_y
+        )
+        if notes
+        else None
+    )
 
     return Layout(
         paper=paper,
@@ -365,4 +385,5 @@ def plan(
         scale_y=scale_y,
         rulers=rulers,
         notes=notes,
+        qr=qr,
     )
