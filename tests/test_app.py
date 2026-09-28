@@ -45,7 +45,7 @@ def test_too_large_is_explained_in_the_typed_unit():
         data={"width": "30", "height": "17", "unit": "cm", "paper": "A4"},
     )
     assert "30 × 17 cm does not fit on A4 (21 × 29.7 cm)" in r.text
-    assert "18 × 26.1 cm" in r.text
+    assert "18 × 24.9 cm" in r.text
 
 
 def test_preview_without_an_image_explains():

@@ -206,7 +206,7 @@ async def preview(
             request, "_preview.html", {"error": str(e), "waiting": e.waiting}
         )
     printer = printer.strip()
-    png = render_preview(layout, img, layout.describe(unit, printer))
+    png = render_preview(layout, img, layout.describe(unit, printer), seo.HOME)
     return templates.TemplateResponse(
         request,
         "_preview.html",
@@ -259,7 +259,7 @@ async def pdf(
         )
     except RequestError as e:
         return index_page(request, str(e))
-    data = write_pdf(layout, img, layout.describe(unit, printer.strip()))
+    data = write_pdf(layout, img, layout.describe(unit, printer.strip()), seo.HOME)
     name = f"exactly-print-{layout.trim.w:.0f}x{layout.trim.h:.0f}mm-{layout.paper}.pdf"
     kind = "inline" if disposition == "inline" else "attachment"
     return Response(

@@ -7,7 +7,10 @@ from PIL import Image
 
 from exactly_print.layout import plan
 from exactly_print.pdf import PT, write_pdf
-from exactly_print.preview import render_preview
+from exactly_print.preview import INK, PAPER, render_preview
+from exactly_print.qr import encode
+
+LINK = "https://exactly-print.puncto.live/"
 
 
 def test_pdf_has_the_page_and_trim_box_in_points():
@@ -106,7 +109,8 @@ def test_calibrated_preview_is_still_the_real_sheet():
 def test_a_plain_page_is_only_the_image_and_its_crop_marks():
     image = Image.new("RGB", (600, 850))
     layout = plan(image.size, 120, 170, "A4", rulers=False, notes=False)
-    pdf = write_pdf(layout, image, layout.describe("mm"))
+    pdf = write_pdf(layout, image, layout.describe("mm"), LINK)
+    assert b" re\n" not in pdf  # no QR code
     assert b"Both rulers must measure" not in pdf
     assert b"Actual size" not in pdf
     assert b"(Image 120" not in pdf
@@ -128,3 +132,60 @@ def test_the_preview_draws_a_plain_page_too():
     layout = plan(image.size, 120, 170, "A4", rulers=False, notes=False)
     png = render_preview(layout, image, layout.describe("mm"), px_per_mm=2)
     assert Image.open(BytesIO(png)).size == (420, 594)
+
+
+def test_the_pdf_draws_the_qr_code_inside_its_square():
+    image = Image.new("RGB", (600, 850))
+    layout = plan(image.size, 120, 170, "A4")
+    pdf = write_pdf(layout, image, link=LINK)
+    box = layout.qr
+    rects = re.findall(rb"\n([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) re\n", pdf)
+    assert rects
+    module = box.w / len(encode(LINK)) * PT
+    for raw in rects:
+        x, y, w, h = (float(v) for v in raw)
+        assert x >= box.x * PT - 0.001 and x + w <= box.right * PT + 0.001
+        assert y >= box.y * PT - 0.001 and y + h <= box.top * PT + 0.001
+        # Each rectangle is a row of dark modules, so it is one module tall.
+        assert h == pytest.approx(module, abs=0.001)
+        assert w == pytest.approx(round(w / module) * module, abs=0.001)
+    # Runs, not one rectangle per module: the three finder patterns alone
+    # would be far more than this.
+    assert len(rects) < len(encode(LINK)) ** 2
+
+
+def test_the_pdf_puts_the_top_left_module_of_the_code_at_the_top_left():
+    image = Image.new("RGB", (600, 850))
+    layout = plan(image.size, 120, 170, "A4")
+    pdf = write_pdf(layout, image, link=LINK)
+    box = layout.qr
+    module = box.w / len(encode(LINK))
+    # The first row of a finder pattern is seven dark modules wide, and it
+    # belongs at the top of the square, not the bottom.
+    top_row = f"{box.x * PT:.3f} {(box.top - module) * PT:.3f} {7 * module * PT:.3f}"
+    assert top_row.encode() in pdf
+
+
+def test_the_preview_draws_the_code_in_the_top_right_corner():
+    image = Image.new("RGB", (600, 850), (255, 255, 255))
+    layout = plan(image.size, 120, 170, "A4")
+    page = Image.open(BytesIO(render_preview(layout, image, link=LINK)))
+    box = layout.qr
+    s = 4  # the preview's pixels per millimetre
+    left, top = round(box.x * s), round((layout.page_h - box.top) * s)
+    code = page.crop((left, top, left + round(box.w * s), top + round(box.h * s)))
+    assert code.getpixel((0, 0)) == INK  # the corner of the first finder
+    colours = {colour: count for count, colour in code.getcolors()}
+    assert set(colours) == {INK, PAPER}  # squares, not a smudge
+    assert 0.3 < colours[INK] / (code.width * code.height) < 0.7
+    # Nothing of the code spills onto the paper kept clear around it.
+    assert page.getpixel((left - 1, top + 2)) == PAPER
+    assert page.getpixel((left + 2, top + code.height + 1)) == PAPER
+
+
+def test_the_preview_leaves_the_code_off_a_clean_sheet():
+    image = Image.new("RGB", (600, 850), (255, 255, 255))
+    layout = plan(image.size, 120, 170, "A4", rulers=False, notes=False)
+    page = Image.open(BytesIO(render_preview(layout, image, link=LINK)))
+    corner = page.crop((page.width - 80, 0, page.width, 80))
+    assert corner.getcolors() == [(80 * 80, PAPER)]
